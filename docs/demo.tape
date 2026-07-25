@@ -20,7 +20,10 @@ Set Width 1180
 Set Height 1120
 Set Padding 25
 Set Theme "Catppuccin Mocha"
-Set TypingSpeed 65ms
+Set TypingSpeed 32ms
+# A terminal barely moves between frames; 20 keeps the file small enough to
+# sit at the top of a README.
+Set Framerate 20
 
 Hide
 Type "export PS1='$ '" Enter
@@ -34,50 +37,50 @@ Type `printf '\n[[player]]\nname = "Adrien"\nmax_monthly_budget = 40.00\n  [play
 Type "cd $BG && clear" Enter
 Show
 
-Sleep 1s
+Sleep 800ms
 
 # Who plays, and what each of them plays.
 Type "blindgrid player list"
 Sleep 400ms
 Enter
-Sleep 3s
+Sleep 2.4s
 
 Type "clear"
 Enter
-Sleep 400ms
+Sleep 300ms
 
 # The month is planned for the household in one go.
-Type "blindgrid generate --month 2026-09"
-Sleep 600ms
+Type "blindgrid generate -m 2026-09"
+Sleep 500ms
 Enter
-Sleep 1.8s
+Sleep 1.3s
 
 # Each person is asked for their own budget, against their own ceiling.
 Type "20"
-Sleep 700ms
+Sleep 600ms
 Enter
-Sleep 1.2s
+Sleep 1s
 Type "12"
-Sleep 700ms
+Sleep 600ms
 Enter
-Sleep 7s
+Sleep 3.6s
 
 Type "clear"
 Enter
-Sleep 400ms
+Sleep 300ms
 
-# Running it again returns the same plan rather than drawing a new one.
-Type "blindgrid generate --month 2026-09"
-Sleep 500ms
+# The same plan comes back in another language. Each run also shows that the
+# month is drawn once: the numbers are identical every time.
+Type "blindgrid generate --lang es -m 2026-09"
+Sleep 400ms
 Enter
-Sleep 4.5s
+Sleep 5s
 
 Type "clear"
 Enter
-Sleep 400ms
+Sleep 300ms
 
-# The interface speaks English, French, Spanish and German.
-Type "blindgrid generate --lang fr --month 2026-09"
-Sleep 500ms
+Type "blindgrid generate --lang de -m 2026-09"
+Sleep 400ms
 Enter
-Sleep 6s
+Sleep 5.5s
