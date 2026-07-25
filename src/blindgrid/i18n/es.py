@@ -34,15 +34,15 @@ MESSAGES: dict[str, str] = {
     "prompt.language": "¿Idioma?",
     "prompt.lottery.label": "¿Nombre?",
     "prompt.lottery.currency": "¿Moneda?",
-    "prompt.lottery.price": "¿Precio por combinación?",
+    "prompt.lottery.price": "¿Precio por apuesta?",
     "prompt.lottery.days": "Días de sorteo",
     "prompt.lottery.weight": "¿Peso? (parte relativa, 0 lo desactiva)",
     "prompt.pool.name": "¿Nombre del grupo {number}?",
     "prompt.pool.count": "¿Cuántos números se sortean?",
-    "prompt.pool.max": "¿Sorteados del 1 al?",
+    "prompt.pool.max": "¿Número más alto?",
     "prompt.pool.another": "¿Añadir otro grupo?",
-    "choice.per.grid": "{price} {currency} por combinación",
-    "choice.per.grid.weight": "{price} {currency} por combinación, peso {weight}",
+    "choice.per.grid": "{price} {currency} por apuesta",
+    "choice.per.grid.weight": "{price} {currency} por apuesta, peso {weight}",
     "plan.title": "Sorteos a jugar — {month} {year}",
     "plan.column.date": "Fecha",
     "plan.column.day": "Día",
@@ -53,7 +53,7 @@ MESSAGES: dict[str, str] = {
     "plan.column.weight": "Peso",
     "plan.column.allocated": "Asignado",
     "plan.column.committed": "Comprometido",
-    "plan.column.grids": "Combin.",
+    "plan.column.grids": "Apuestas",
     "plan.column.unused": "Sin usar",
     "plan.column.unspent": "Sin gastar",
     "plan.column.budget": "Presupuesto",
@@ -87,10 +87,12 @@ MESSAGES: dict[str, str] = {
         "Compartir un sorteo no cambia las probabilidades."
     ),
     "note.no.draw": "no queda ningún sorteo en este periodo",
-    "note.unplayed": "solo quedan {available} sorteo(s) en el periodo, {unplayed} combinación(es) "
-    "asequible(s) sin jugar",
+    "note.unplayed": (
+        "solo quedan {available} sorteo(s) en el periodo, "
+        "{unplayed} apuesta(s) asequible(s) sin jugar"
+    ),
     "note.below.price": (
-        "la parte de {share} no llega al precio de {price} por combinación, se omite este mes"
+        "la parte de {share} no llega al precio de {price} por apuesta, se omite este mes"
     ),
     "note.disabled": "desactivada (peso cero)",
     "config.file": "Archivo",
@@ -101,15 +103,15 @@ MESSAGES: dict[str, str] = {
     "config.players": "Jugadores",
     "config.language": "Idioma",
     "config.plan": "Plan actual",
-    "config.plan.none": "ninguno sorteado aún",
+    "config.plan.none": "ninguno todavía",
     "config.plan.unreadable": "ilegible",
     "config.plan.drawn": "{month} {year}, sorteado el {date}",
     "config.saved": "{path} guardado",
     "config.wrote": "{path} creado",
     "config.review": "Revisa los precios y los días de sorteo antes de jugar.",
     "config.none": "ninguno",
-    "player.saved": "{name} guardado en {path}",
-    "player.removed": "{name} eliminado de {path}",
+    "player.saved": "{name} se ha guardado en {path}",
+    "player.removed": "{name} se ha eliminado de {path}",
     "player.updating": "Actualizando a {name}.",
     "player.none": "No hay jugadores configurados — «generate» planifica para una sola persona.",
     "player.add.hint": "Añade a alguien con «blindgrid player add».",

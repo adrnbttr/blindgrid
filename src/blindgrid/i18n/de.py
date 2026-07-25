@@ -33,15 +33,15 @@ MESSAGES: dict[str, str] = {
     "prompt.language": "Sprache?",
     "prompt.lottery.label": "Bezeichnung?",
     "prompt.lottery.currency": "Währung?",
-    "prompt.lottery.price": "Preis pro Schein?",
+    "prompt.lottery.price": "Preis pro Tipp?",
     "prompt.lottery.days": "Ziehungstage",
     "prompt.lottery.weight": "Gewicht? (relativer Anteil, 0 deaktiviert)",
     "prompt.pool.name": "Name der {number}. Gruppe?",
     "prompt.pool.count": "Wie viele Zahlen werden gezogen?",
-    "prompt.pool.max": "Gezogen von 1 bis?",
+    "prompt.pool.max": "Höchste Zahl?",
     "prompt.pool.another": "Weitere Gruppe hinzufügen?",
-    "choice.per.grid": "{price} {currency} pro Schein",
-    "choice.per.grid.weight": "{price} {currency} pro Schein, Gewicht {weight}",
+    "choice.per.grid": "{price} {currency} pro Tipp",
+    "choice.per.grid.weight": "{price} {currency} pro Tipp, Gewicht {weight}",
     "plan.title": "Zu spielende Ziehungen — {month} {year}",
     "plan.column.date": "Datum",
     "plan.column.day": "Tag",
@@ -52,7 +52,7 @@ MESSAGES: dict[str, str] = {
     "plan.column.weight": "Gewicht",
     "plan.column.allocated": "Zugeteilt",
     "plan.column.committed": "Eingesetzt",
-    "plan.column.grids": "Scheine",
+    "plan.column.grids": "Tipps",
     "plan.column.unused": "Ungenutzt",
     "plan.column.unspent": "Übrig",
     "plan.column.budget": "Budget",
@@ -75,8 +75,8 @@ MESSAGES: dict[str, str] = {
     ),
     "plan.replacing": "Ersetze den am {date} gezogenen Plan",
     "plan.replacing.warning": (
-        "So lange neu zu ziehen, bis die Zahlen gefallen, ist genau die Verzerrung, "
-        "die dieses Werkzeug beseitigt."
+        "Immer wieder neu zu ziehen, bis die Zahlen gefallen, ist genau jene "
+        "Verzerrung, die dieses Werkzeug beseitigt."
     ),
     "plan.player.line": "{name} — Grenze {ceiling}, spielt {lotteries}",
     "plan.player.nothing": "nichts",
@@ -85,11 +85,12 @@ MESSAGES: dict[str, str] = {
         "{count} Ziehung(en) werden von mehreren Personen gespielt: {listed}. "
         "Eine Ziehung zu teilen ändert nichts an den Chancen."
     ),
-    "note.no.draw": "in diesem Zeitraum bleibt keine Ziehung",
-    "note.unplayed": "nur noch {available} Ziehung(en) im Zeitraum, {unplayed} bezahlbare(r) "
-    "Schein(e) ungespielt",
+    "note.no.draw": "keine Ziehung mehr in diesem Zeitraum",
+    "note.unplayed": (
+        "nur noch {available} Ziehung(en) im Zeitraum, {unplayed} bezahlbare(r) Tipp(s) ungespielt"
+    ),
     "note.below.price": (
-        "Anteil von {share} liegt unter dem Scheinpreis von {price}, diesen Monat übersprungen"
+        "Anteil von {share} liegt unter dem Preis von {price} pro Tipp, diesen Monat übersprungen"
     ),
     "note.disabled": "deaktiviert (Gewicht ist 0)",
     "config.file": "Datei",
@@ -105,14 +106,16 @@ MESSAGES: dict[str, str] = {
     "config.plan.drawn": "{month} {year}, gezogen am {date}",
     "config.saved": "{path} gespeichert",
     "config.wrote": "{path} angelegt",
-    "config.review": "Preise und Ziehungstage vor dem Spielen prüfen.",
+    "config.review": "Prüfen Sie Preise und Ziehungstage, bevor Sie spielen.",
     "config.none": "keine",
     "player.saved": "{name} in {path} gespeichert",
     "player.removed": "{name} aus {path} entfernt",
     "player.updating": "{name} wird aktualisiert.",
     "player.none": "Keine Spieler konfiguriert — „generate“ plant für eine Person.",
-    "player.add.hint": "Jemanden mit „blindgrid player add“ hinzufügen.",
-    "player.second.hint": "Eine zweite Person hinzufügen, dann plant „generate“ für den Haushalt.",
+    "player.add.hint": "Fügen Sie jemanden mit „blindgrid player add“ hinzu.",
+    "player.second.hint": (
+        "Fügen Sie eine zweite Person hinzu, dann plant „generate“ für den Haushalt."
+    ),
     "player.weight.explain": (
         "Gewichte sind relative Anteile am Budget dieser Person, keine Anzahl von Ziehungen."
     ),
@@ -121,7 +124,7 @@ MESSAGES: dict[str, str] = {
     ),
     "lottery.saved": "{label} in {path} gespeichert",
     "error.config.missing": (
-        "Keine Konfiguration unter {path} gefunden.\nMit „blindgrid config init“ eine anlegen."
+        "Keine Konfiguration unter {path} gefunden.\nLegen Sie mit „blindgrid config init“ eine an."
     ),
     "error.prefix": "Fehler: ",
     "error.cancelled": "Abgebrochen.",
@@ -149,12 +152,14 @@ MESSAGES: dict[str, str] = {
         "--player benötigt Spieler in der Konfiguration. "
         "Fügen Sie einen mit „blindgrid player add“ hinzu."
     ),
-    "error.exists": "{path} existiert bereits. Mit --force überschreiben.",
+    "error.exists": "{path} existiert bereits. Überschreiben Sie sie mit --force.",
     "error.name.empty": "Ein Spieler braucht einen Namen.",
     "error.plays.nothing": "Wer nichts spielt, hat nichts zu planen.",
     "error.no.lotteries": "Fügen Sie zuerst eine Lotterie mit „blindgrid lottery add“ hinzu.",
     "error.not.number": "{value} ist keine Zahl",
-    "error.weight.positive": ("Das Gewicht für {label} muss größer als null sein, sonst abwählen."),
+    "error.weight.positive": (
+        "Das Gewicht für {label} muss größer als null sein, sonst wählen Sie sie ab."
+    ),
     "error.plan.ignored": "Gespeicherter Plan wird ignoriert: {reason}",
     "error.plan.unsaved": (
         "Dieser Plan konnte nicht gespeichert werden und wird vergessen: {reason}"
