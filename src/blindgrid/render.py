@@ -7,7 +7,7 @@ makes an unspent remainder read as a deliberate outcome rather than a bug.
 
 from __future__ import annotations
 
-import calendar
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
@@ -17,12 +17,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from blindgrid.i18n import month_name, t, weekday_name
 from blindgrid.models import Grid, Plan, Pool
-
-DISCLAIMER = (
-    "Draws are independent events. These numbers are not predictions, "
-    "and no combination is more likely than another."
-)
 
 # How many shared draws to name before trailing off.
 SHARED_SHOWN = 3
@@ -32,51 +28,103 @@ def format_money(amount: Decimal, currency: str) -> str:
     return f"{amount:.2f} {currency}"
 
 
-def format_numbers(grids: tuple[Grid, ...], pools: tuple[Pool, ...]) -> Text:
+@dataclass(frozen=True, slots=True)
+class NumberLayout:
+    """Column widths shared by every row of a plan.
+
+    A plan mixes lotteries of different shapes — five numbers here, six there,
+    one bonus ball or two. Sizing each row on its own would leave the
+    separators and pool names drifting left and right down the table, which is
+    exactly the kind of visual noise that makes a list of numbers hard to
+    check against a ticket. These widths are measured across the whole plan so
+    every row lines up.
+    """
+
+    blocks: tuple[int, ...]
+    labels: tuple[int, ...]
+
+    @classmethod
+    def measure(cls, plan: Plan) -> NumberLayout:
+        blocks: dict[int, int] = {}
+        labels: dict[int, int] = {}
+        for draw in plan.draws:
+            for position, (grid, pool) in enumerate(
+                zip(draw.grids, draw.lottery.pools, strict=False)
+            ):
+                digits = len(str(pool.maximum))
+                width = len(grid.numbers) * digits + max(len(grid.numbers) - 1, 0)
+                blocks[position] = max(blocks.get(position, 0), width)
+                labels[position] = max(labels.get(position, 0), len(grid.pool_name))
+
+        return cls(
+            blocks=tuple(blocks.get(i, 0) for i in range(len(blocks))),
+            labels=tuple(labels.get(i, 0) for i in range(len(labels))),
+        )
+
+    def block(self, position: int) -> int:
+        return self.blocks[position] if position < len(self.blocks) else 0
+
+    def label(self, position: int) -> int:
+        return self.labels[position] if position < len(self.labels) else 0
+
+
+def format_numbers(
+    grids: tuple[Grid, ...],
+    pools: tuple[Pool, ...],
+    layout: NumberLayout | None = None,
+) -> Text:
     """Render a grid as ``7 19 34 41 48 · stars 3 9``.
 
-    Numbers are zero-padded to the width of the pool maximum so columns line
-    up vertically across rows, which is what makes a long plan scannable.
+    Numbers are right-aligned to the width of their pool maximum, and each
+    block is padded to the widest one in the plan, so separators and pool
+    names sit in the same column on every row.
     """
-    widths = {pool.name: len(str(pool.maximum)) for pool in pools}
+    digits = {pool.name: len(str(pool.maximum)) for pool in pools}
     text = Text()
-    for index, grid in enumerate(grids):
-        if index:
+
+    for position, grid in enumerate(grids):
+        if position:
             text.append("  ·  ", style="dim")
-            text.append(f"{grid.pool_name} ", style="dim italic")
-        width = widths.get(grid.pool_name, 2)
-        text.append(
-            " ".join(str(number).rjust(width) for number in grid.numbers),
-            style="bold" if index == 0 else "cyan",
-        )
+            text.append(
+                grid.pool_name.ljust(layout.label(position) if layout else 0) + " ",
+                style="dim italic",
+            )
+
+        width = digits.get(grid.pool_name, 2)
+        rendered = " ".join(str(number).rjust(width) for number in grid.numbers)
+        if layout:
+            rendered = rendered.ljust(layout.block(position))
+        text.append(rendered, style="bold" if position == 0 else "cyan")
+
     return text
 
 
 def draws_table(plan: Plan) -> Table:
     table = Table(
-        title=f"Draws to play — {calendar.month_name[plan.month]} {plan.year}",
+        title=t("plan.title", month=month_name(plan.month), year=plan.year),
         box=box.ROUNDED,
         header_style="bold",
         title_style="bold",
         padding=(0, 1),
         expand=False,
     )
-    table.add_column("Date", style="dim", no_wrap=True)
-    table.add_column("Day", no_wrap=True)
+    table.add_column(t("plan.column.date"), style="dim", no_wrap=True)
+    table.add_column(t("plan.column.day"), no_wrap=True)
     if plan.is_household:
-        table.add_column("Player", style="magenta", no_wrap=True)
-    table.add_column("Lottery", style="bold")
-    table.add_column("Numbers")
-    table.add_column("Cost", justify="right", no_wrap=True)
+        table.add_column(t("plan.column.player"), style="magenta", no_wrap=True)
+    table.add_column(t("plan.column.lottery"), style="bold")
+    table.add_column(t("plan.column.numbers"))
+    table.add_column(t("plan.column.cost"), justify="right", no_wrap=True)
 
     today = date.today()
+    layout = NumberLayout.measure(plan)
     for draw in plan.draws:
-        cells = [draw.draw_date.isoformat(), draw.weekday_name]
+        cells = [draw.draw_date.isoformat(), weekday_name(draw.draw_date.weekday())]
         if plan.is_household:
             cells.append(draw.player or "")
         cells += [
             draw.lottery.label,
-            format_numbers(draw.grids, draw.lottery.pools),
+            format_numbers(draw.grids, draw.lottery.pools, layout),
             format_money(draw.cost, draw.lottery.currency),
         ]
         # A plan reopened mid-month still lists the draws it opened with. Dim
@@ -88,19 +136,19 @@ def draws_table(plan: Plan) -> Table:
 def players_table(plan: Plan) -> Table:
     """Per-player totals, so each person can see their own month."""
     table = Table(
-        title="Per player",
+        title=t("plan.players.title"),
         box=box.ROUNDED,
         header_style="bold",
         title_style="bold",
         padding=(0, 1),
         expand=False,
     )
-    table.add_column("Player", style="bold magenta")
-    table.add_column("Budget", justify="right")
-    table.add_column("Committed", justify="right")
-    table.add_column("Grids", justify="right")
-    table.add_column("Unspent", justify="right", style="dim")
-    table.add_column("Plays")
+    table.add_column(t("plan.column.player"), style="bold magenta")
+    table.add_column(t("plan.column.budget"), justify="right")
+    table.add_column(t("plan.column.committed"), justify="right")
+    table.add_column(t("plan.column.grids"), justify="right")
+    table.add_column(t("plan.column.unspent"), justify="right", style="dim")
+    table.add_column(t("plan.column.plays"))
 
     currency = plan.currency
     for name in plan.player_names:
@@ -115,14 +163,31 @@ def players_table(plan: Plan) -> Table:
             format_money(committed, currency),
             str(sum(1 for d in plan.draws if d.player == name)),
             format_money(budget - committed, currency),
-            ", ".join(labels) or "nothing this month",
+            ", ".join(labels) or t("plan.plays.nothing"),
         )
     return table
 
 
+def format_weights(plan: Plan) -> dict[float, str]:
+    """Render every weight in a plan to the same number of decimals.
+
+    Mixing ``1`` and ``0.4`` in a right-aligned column puts the decimal points
+    on different characters. One shared precision, chosen from the values
+    actually present, keeps them in a line without adding noise to a table of
+    whole numbers.
+    """
+    weights = {allocation.lottery.weight for allocation in plan.allocations}
+    decimals = 0
+    for weight in weights:
+        text = f"{weight:g}"
+        if "." in text:
+            decimals = max(decimals, len(text.split(".")[1]))
+    return {weight: f"{weight:.{decimals}f}" for weight in weights}
+
+
 def summary_table(plan: Plan) -> Table:
     table = Table(
-        title="Budget allocation",
+        title=t("plan.summary.title"),
         box=box.ROUNDED,
         header_style="bold",
         title_style="bold",
@@ -130,20 +195,21 @@ def summary_table(plan: Plan) -> Table:
         expand=False,
     )
     if plan.is_household:
-        table.add_column("Player", style="magenta", no_wrap=True)
-    table.add_column("Lottery", style="bold")
-    table.add_column("Weight", justify="right")
-    table.add_column("Allocated", justify="right")
-    table.add_column("Committed", justify="right")
-    table.add_column("Grids", justify="right")
-    table.add_column("Unused", justify="right", style="dim")
+        table.add_column(t("plan.column.player"), style="magenta", no_wrap=True)
+    table.add_column(t("plan.column.lottery"), style="bold")
+    table.add_column(t("plan.column.weight"), justify="right")
+    table.add_column(t("plan.column.allocated"), justify="right")
+    table.add_column(t("plan.column.committed"), justify="right")
+    table.add_column(t("plan.column.grids"), justify="right")
+    table.add_column(t("plan.column.unused"), justify="right", style="dim")
 
+    weights = format_weights(plan)
     for allocation in plan.allocations:
         currency = allocation.lottery.currency
         cells = [allocation.player or ""] if plan.is_household else []
         cells += [
             allocation.lottery.label,
-            f"{allocation.lottery.weight:g}",
+            weights[allocation.lottery.weight],
             format_money(allocation.share, currency),
             format_money(allocation.committed, currency),
             str(allocation.grid_count),
@@ -169,10 +235,12 @@ def notes(plan: Plan) -> Text | None:
         listed = ", ".join(f"{label} on {day.isoformat()}" for day, label in shared[:SHARED_SHOWN])
         lines.append(
             (
-                "Shared draws",
-                f"{len(shared)} draw(s) are played by more than one person: {listed}"
-                f"{', …' if len(shared) > SHARED_SHOWN else ''}. "
-                f"Sharing a draw costs nothing in odds.",
+                t("note.shared"),
+                t(
+                    "note.shared.body",
+                    count=len(shared),
+                    listed=listed + (", …" if len(shared) > SHARED_SHOWN else ""),
+                ),
             )
         )
 
@@ -193,18 +261,18 @@ def totals_panel(plan: Plan) -> Panel:
     """The bottom line: what was budgeted, what is committed, what stays unspent."""
     currency = plan.currency
     body = Text()
-    body.append("Budget      ", style="dim")
+    body.append(t("plan.column.budget").ljust(11) + " ", style="dim")
     body.append(format_money(plan.budget, currency), style="bold")
-    body.append("\nCommitted   ", style="dim")
+    body.append("\n" + t("plan.column.committed").ljust(11) + " ", style="dim")
     body.append(format_money(plan.total_committed, currency), style="bold green")
-    body.append("\nUnspent     ", style="dim")
+    body.append("\n" + t("plan.column.unspent").ljust(11) + " ", style="dim")
     body.append(format_money(plan.unspent, currency), style="bold")
     return Panel(
         body,
         box=box.ROUNDED,
         expand=False,
         padding=(1, 3),
-        title="Household totals" if plan.is_household else "Totals",
+        title=t("plan.totals.household") if plan.is_household else t("plan.totals.title"),
     )
 
 
@@ -215,7 +283,7 @@ def render_plan(plan: Plan, console: Console) -> None:
         console.print(draws_table(plan))
         console.print()
     else:
-        console.print(Text("No draw could be planned with this budget.", style="bold yellow"), "\n")
+        console.print(Text(t("plan.empty"), style="bold yellow"), "\n")
 
     if plan.is_household:
         console.print(players_table(plan))
@@ -228,5 +296,5 @@ def render_plan(plan: Plan, console: Console) -> None:
         console.print(annotations)
     console.print()
     console.print(totals_panel(plan))
-    console.print(Text(DISCLAIMER, style="dim italic"), width=76)
+    console.print(Text(t("plan.disclaimer"), style="dim italic"), width=76)
     console.print()

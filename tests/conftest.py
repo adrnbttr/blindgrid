@@ -12,7 +12,22 @@ from decimal import Decimal
 
 import pytest
 
+from blindgrid import i18n
 from blindgrid.models import Lottery, Pool
+
+
+@pytest.fixture(autouse=True)
+def english_interface(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the interface language for every test.
+
+    Assertions are written against the English catalogue, and the language
+    otherwise follows the machine's locale — so without this the suite would
+    pass or fail depending on who runs it. ``tests/test_i18n.py`` is where the
+    other languages are exercised.
+    """
+    monkeypatch.setenv(i18n.ENV_VAR, "en")
+    i18n.activate("en")
+
 
 MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY = range(7)
 

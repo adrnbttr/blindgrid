@@ -23,7 +23,7 @@ from typing import Any
 
 import tomli_w
 
-from blindgrid import paths
+from blindgrid import i18n, paths
 from blindgrid.errors import ConfigError
 from blindgrid.filters import DEFAULT_ENABLED, RULE_NAMES
 from blindgrid.models import WEEKDAY_NAMES, Lottery, Player, Pool, money
@@ -45,6 +45,7 @@ class Settings:
     enabled_filters: frozenset[str]
     lotteries: tuple[Lottery, ...]
     players: tuple[Player, ...] = ()
+    language: str | None = None
     path: Path | None = None
 
     def enabled_lotteries(self) -> tuple[Lottery, ...]:
@@ -200,6 +201,18 @@ def _parse_filters(table: dict[str, Any]) -> frozenset[str]:
     return frozenset(name for name in RULE_NAMES if table.get(name, True))
 
 
+def _parse_language(value: Any) -> str | None:
+    """Validate the configured language, if any."""
+    if value is None:
+        return None
+    code = i18n.normalise(str(value))
+    if code is None:
+        raise ConfigError(
+            f"language: {value!r} is not available. Known: {', '.join(i18n.available())}"
+        )
+    return code
+
+
 def parse(data: dict[str, Any], path: Path | None = None) -> Settings:
     """Build :class:`Settings` from an already decoded TOML mapping."""
     lottery_tables = data.get("lottery", [])
@@ -227,6 +240,7 @@ def parse(data: dict[str, Any], path: Path | None = None) -> Settings:
             data.get("max_monthly_budget", DEFAULT_MAX_MONTHLY_BUDGET), "max_monthly_budget"
         ),
         export_path=Path(str(data.get("export_path", DEFAULT_EXPORT_PATH))).expanduser(),
+        language=_parse_language(data.get("language")),
         enabled_filters=_parse_filters(filters) if filters else DEFAULT_ENABLED,
         lotteries=lotteries,
         players=players,
@@ -255,6 +269,7 @@ def to_dict(settings: Settings) -> dict[str, Any]:
     return {
         "max_monthly_budget": float(settings.max_monthly_budget),
         "export_path": str(settings.export_path),
+        **({"language": settings.language} if settings.language else {}),
         "filters": {name: name in settings.enabled_filters for name in RULE_NAMES},
         "lottery": [
             {

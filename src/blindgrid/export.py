@@ -7,11 +7,11 @@ looking for a pattern in independent events.
 
 from __future__ import annotations
 
-import calendar
 from pathlib import Path
 
+from blindgrid.i18n import month_name, t, weekday_name
 from blindgrid.models import Grid, Plan
-from blindgrid.render import DISCLAIMER, format_money
+from blindgrid.render import format_money
 
 
 def _numbers(grids: tuple[Grid, ...]) -> str:
@@ -20,13 +20,13 @@ def _numbers(grids: tuple[Grid, ...]) -> str:
 
 def to_markdown(plan: Plan) -> str:
     """Render ``plan`` as a standalone Markdown document."""
-    month_name = calendar.month_name[plan.month]
+    month = month_name(plan.month)
     lines = [
-        f"# Lottery plan — {month_name} {plan.year}",
+        f"# {t('plan.title', month=month, year=plan.year)}",
         "",
-        f"*{DISCLAIMER}*",
+        f"*{t('plan.disclaimer')}*",
         "",
-        "## Draws",
+        "## " + t("plan.column.numbers"),
         "",
     ]
 
@@ -35,23 +35,24 @@ def to_markdown(plan: Plan) -> str:
 
     if plan.draws:
         lines += [
-            f"| Date | Day | {player_column}Lottery | Numbers | Cost |",
+            f"| {t('plan.column.date')} | {t('plan.column.day')} | {player_column}"
+            f"{t('plan.column.lottery')} | {t('plan.column.numbers')} | {t('plan.column.cost')} |",
             f"| --- | --- | {player_rule}--- | --- | ---: |",
         ]
         lines += [
-            f"| {draw.draw_date.isoformat()} | {draw.weekday_name} "
+            f"| {draw.draw_date.isoformat()} | {weekday_name(draw.draw_date.weekday())} "
             f"| {draw.player + ' | ' if plan.is_household else ''}{draw.lottery.label} "
             f"| {_numbers(draw.grids)} "
             f"| {format_money(draw.cost, draw.lottery.currency)} |"
             for draw in plan.draws
         ]
     else:
-        lines.append("No draw could be planned with this budget.")
+        lines.append(t("plan.empty"))
 
     if plan.is_household:
         lines += [
             "",
-            "## Per player",
+            "## " + t("plan.players.title"),
             "",
             "| Player | Budget | Committed | Grids | Unspent |",
             "| --- | ---: | ---: | ---: | ---: |",
@@ -67,7 +68,7 @@ def to_markdown(plan: Plan) -> str:
 
     lines += [
         "",
-        "## Budget allocation",
+        "## " + t("plan.summary.title"),
         "",
         f"| {player_column}Lottery | Weight | Allocated | Committed | Grids | Unused |",
         f"| {player_rule}--- | ---: | ---: | ---: | ---: | ---: |",
@@ -96,12 +97,12 @@ def to_markdown(plan: Plan) -> str:
             )
         )
     if annotations:
-        lines += ["", "### Notes", ""]
+        lines += ["", "### " + t("note.shared"), ""]
         lines += [f"- **{label}**: {note}" for label, note in annotations]
 
     lines += [
         "",
-        "## Totals",
+        "## " + t("plan.totals.title"),
         "",
         f"- Budget: **{format_money(plan.budget, plan.currency)}**",
         f"- Committed: **{format_money(plan.total_committed, plan.currency)}**",

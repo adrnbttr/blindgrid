@@ -248,7 +248,10 @@ function Show-PathAdvice([string] $Executable) {
     Write-Warn "$directory is not on your PATH"
     Write-Info 'Add it for your user, then open a new terminal:'
     Write-Host ""
-    Write-Host "      $(Paint "[Environment]::SetEnvironmentVariable('PATH', ""`$env:PATH;$directory"", 'User')" '1')"
+    # Built separately: nesting quotes this deep inside an expandable string is
+    # a parse error, and the line is meant to be copied verbatim.
+    $command = "[Environment]::SetEnvironmentVariable('PATH', `"`$env:PATH;$directory`", 'User')"
+    Write-Host "      $(Paint $command '1')"
     Write-Host ""
 }
 
