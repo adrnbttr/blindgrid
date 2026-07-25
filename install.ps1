@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     blindgrid installer for Windows.
 
@@ -70,7 +70,7 @@ function Write-Ok([string] $Message)   { Write-Host "  $(Paint '✓' '32') $Mess
 function Write-Warn([string] $Message) { Write-Host "  $(Paint '!' '33') $Message" }
 function Write-Info([string] $Message) { Write-Host "    $(Paint $Message '90')" }
 
-function Stop-WithMessage([string] $Message) {
+function Show-Failure([string] $Message) {
     Write-Host ""
     Write-Host "  $(Paint "✗ $Message" '31')"
     Write-Host ""
@@ -138,7 +138,7 @@ function Invoke-Uninstall {
     exit 0
 }
 
-if ($Uninstall) { Invoke-Uninstall }
+if ($script:Uninstall) { Invoke-Uninstall }
 
 # --------------------------------------------------------------- python lookup
 
@@ -176,7 +176,7 @@ function Show-PythonHint {
 function Install-WithUv {
     Write-Step 'Installing with uv'
     & uv tool install --force --python ">=$MinPython" $Source 2>&1 | ForEach-Object { Write-Host "    $_" }
-    if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'uv could not install blindgrid.' }
+    if ($LASTEXITCODE -ne 0) { Show-Failure 'uv could not install blindgrid.' }
     Write-Ok 'installed'
 
     $binHome = if ($env:UV_TOOL_BIN_DIR) { $env:UV_TOOL_BIN_DIR }
@@ -188,7 +188,7 @@ function Install-WithUv {
 function Install-WithPipx {
     Write-Step 'Installing with pipx'
     & pipx install --force $Source 2>&1 | ForEach-Object { Write-Host "    $_" }
-    if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'pipx could not install blindgrid.' }
+    if ($LASTEXITCODE -ne 0) { Show-Failure 'pipx could not install blindgrid.' }
     Write-Ok 'installed'
 
     $binHome = if ($env:PIPX_BIN_DIR) { $env:PIPX_BIN_DIR }
@@ -202,7 +202,7 @@ function Install-WithVenv {
         Write-Host ""
         Write-Warn "No Python $MinPython or newer found."
         Show-PythonHint
-        Stop-WithMessage 'Cannot continue without a suitable Python.'
+        Show-Failure 'Cannot continue without a suitable Python.'
     }
 
     Write-Step 'Installing into a dedicated virtual environment'
@@ -214,12 +214,12 @@ function Install-WithVenv {
     # "py -3.12" arrives as one string and has to be split back into a command.
     $parts = $python -split ' '
     & $parts[0] @($parts[1..($parts.Length - 1)]) -m venv $VenvDir
-    if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'Could not create a virtual environment.' }
+    if ($LASTEXITCODE -ne 0) { Show-Failure 'Could not create a virtual environment.' }
 
     $venvPython = Join-Path $VenvDir 'Scripts\python.exe'
     & $venvPython -m pip install --quiet --upgrade pip *> $null
     & $venvPython -m pip install --quiet $Source 2>&1 | ForEach-Object { Write-Host "    $_" }
-    if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'pip could not install blindgrid.' }
+    if ($LASTEXITCODE -ne 0) { Show-Failure 'pip could not install blindgrid.' }
 
     # A .cmd shim rather than a symlink: symlinks need developer mode or admin.
     $shim = Join-Path $BinDir 'blindgrid.cmd'
@@ -252,8 +252,8 @@ function Show-PathAdvice([string] $Executable) {
     Write-Host ""
 }
 
-function New-StarterConfig([string] $Executable) {
-    if ($NoConfig) { return }
+function Write-StarterConfig([string] $Executable) {
+    if ($script:NoConfig) { return }
 
     Write-Step 'Configuration'
     $configFile = Join-Path $ConfigDir 'config.toml'
@@ -304,8 +304,8 @@ $found = Find-Python
 if ($found) { Write-Ok "Python found: $found" } else { Write-Warn "no Python $MinPython or newer on PATH" }
 
 $chosen = switch ($Method) {
-    'Uv'   { if (Test-Command 'uv')   { 'Uv' }   else { Stop-WithMessage 'uv is not installed. See https://docs.astral.sh/uv/' } }
-    'Pipx' { if (Test-Command 'pipx') { 'Pipx' } else { Stop-WithMessage 'pipx is not installed. See https://pipx.pypa.io/' } }
+    'Uv'   { if (Test-Command 'uv')   { 'Uv' }   else { Show-Failure 'uv is not installed. See https://docs.astral.sh/uv/' } }
+    'Pipx' { if (Test-Command 'pipx') { 'Pipx' } else { Show-Failure 'pipx is not installed. See https://pipx.pypa.io/' } }
     'Venv' { 'Venv' }
     default {
         if (Test-Command 'uv') { 'Uv' } elseif (Test-Command 'pipx') { 'Pipx' } else { 'Venv' }
@@ -319,14 +319,14 @@ $executable = switch ($chosen) {
 }
 
 if (-not (Test-Path $executable)) {
-    Stop-WithMessage "Installation finished but $executable is missing."
+    Show-Failure "Installation finished but $executable is missing."
 }
 
 Write-Step 'Verifying'
 & $executable version *> $null
-if ($LASTEXITCODE -ne 0) { Stop-WithMessage 'The installed command does not run.' }
+if ($LASTEXITCODE -ne 0) { Show-Failure 'The installed command does not run.' }
 Write-Ok 'blindgrid runs'
 
-New-StarterConfig $executable
+Write-StarterConfig $executable
 Show-PathAdvice $executable
 Show-Farewell $executable

@@ -70,12 +70,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Linting the script is platform-independent, and shellcheck is not
+      # preinstalled on the macOS runners.
       - name: Lint the script
+        if: runner.os == 'Linux'
         run: shellcheck install.sh
 
       # The installer is the first thing most people run, and its fallback path
       # touches PATH, virtualenvs and the config directory. Exercise it for
-      # real rather than trusting that it still works.
+      # real rather than trusting that it still works. macOS matters here in
+      # its own right: it ships bash 3.2 and the BSD flavour of sed.
       - name: Install from this checkout
         run: bash install.sh --method venv --source .
 
@@ -101,7 +105,12 @@ jobs:
         shell: pwsh
         run: |
           Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -ErrorAction Stop
-          $found = Invoke-ScriptAnalyzer -Path install.ps1 -Severity Error, Warning
+          # PSAvoidUsingWriteHost is aimed at reusable modules, whose output
+          # should stay pipeable. This is an installer whose entire job is to
+          # talk to the person running it, so writing to the host is the point.
+          $found = Invoke-ScriptAnalyzer -Path install.ps1 `
+            -Severity Error, Warning `
+            -ExcludeRule PSAvoidUsingWriteHost
           if ($found) { $found | Format-Table -AutoSize | Out-String | Write-Host; exit 1 }
           Write-Host 'PSScriptAnalyzer: clean'
 

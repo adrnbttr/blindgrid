@@ -142,7 +142,15 @@ def test_the_env_var_overrides_the_location(
     assert store.default_path() == target
 
 
-def test_the_default_location_follows_xdg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_default_location_follows_the_platform(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Where the state directory is depends on the OS; test_paths.py owns that.
+
+    Here we only check that the store defers to it rather than hardcoding a
+    layout of its own — which is what made this test fail on Windows before
+    paths.py existed.
+    """
     monkeypatch.delenv(store.ENV_VAR, raising=False)
-    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    assert store.default_path() == tmp_path / "blindgrid" / "plan.json"
+    monkeypatch.setattr(store.paths, "state_dir", lambda: tmp_path / "somewhere")
+    assert store.default_path() == tmp_path / "somewhere" / "plan.json"
