@@ -17,7 +17,7 @@ Output docs/demo.gif
 Set Shell bash
 Set FontSize 16
 Set Width 1180
-Set Height 1160
+Set Height 1120
 Set Padding 25
 Set Theme "Catppuccin Mocha"
 Set TypingSpeed 65ms
@@ -27,6 +27,7 @@ Type "export PS1='$ '" Enter
 Type "export PATH=$PWD/.venv/bin:$PATH" Enter
 Type `export BG=$(mktemp -d)` Enter
 Type `export BLINDGRID_CONFIG="$BG/config.toml" BLINDGRID_STATE="$BG/plan.json"` Enter
+Type "export BLINDGRID_LANG=en" Enter
 Type "blindgrid config init -c $BLINDGRID_CONFIG" Enter
 # Two people, each with their own ceiling and their own games.
 Type `printf '\n[[player]]\nname = "Adrien"\nmax_monthly_budget = 40.00\n  [player.weight]\n  EuroMillions = 1.0\n  Loto = 1.0\n  EuroDreams = 0.4\n\n[[player]]\nname = "Marie"\nmax_monthly_budget = 25.00\n  [player.weight]\n  Loto = 1.0\n  EuroDreams = 1.0\n' >> "$BLINDGRID_CONFIG"` Enter
@@ -39,11 +40,11 @@ Sleep 1s
 Type "blindgrid player list"
 Sleep 400ms
 Enter
-Sleep 3.5s
+Sleep 3s
 
 Type "clear"
 Enter
-Sleep 500ms
+Sleep 400ms
 
 # The month is planned for the household in one go.
 Type "blindgrid generate --month 2026-09"
@@ -63,10 +64,20 @@ Sleep 7s
 
 Type "clear"
 Enter
-Sleep 500ms
+Sleep 400ms
 
 # Running it again returns the same plan rather than drawing a new one.
 Type "blindgrid generate --month 2026-09"
-Sleep 600ms
+Sleep 500ms
+Enter
+Sleep 4.5s
+
+Type "clear"
+Enter
+Sleep 400ms
+
+# The interface speaks English, French, Spanish and German.
+Type "blindgrid generate --lang fr --month 2026-09"
+Sleep 500ms
 Enter
 Sleep 6s

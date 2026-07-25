@@ -18,6 +18,11 @@ max_monthly_budget = 40.00
 # Where the plan is exported. The file is overwritten on every run.
 export_path = "plan.md"
 
+# Interface language: en, fr, es or de. Leave it out and blindgrid follows your
+# system locale. Only the interface is translated; the keys in this file stay
+# English.
+# language = "fr"
+
 # Anti-pattern filters. Each one only applies to pools large enough for it to
 # mean anything; a 1-from-10 bonus pool is always drawn unfiltered.
 # Turning rules off is safe. Turning many on is not: every active rule shrinks

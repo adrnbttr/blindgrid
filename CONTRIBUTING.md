@@ -90,6 +90,20 @@ filtered draw is a predictable draw. If a rule is still worth it:
 3. Add it to the `[filters]` block in `config.example.toml`.
 4. Cover both the rejection and the degradation in `tests/test_filters.py`.
 
+## Adding a language
+
+One file in `src/blindgrid/i18n/`, copied from `en.py` and translated, plus one
+line in that package's `__init__.py` and one entry in `LANGUAGE_NAMES`.
+
+Tests then check that your catalogue carries exactly the English keys, with
+exactly the same `{placeholders}`, and that nothing longer than three words was
+left in English. A half-finished translation fails the build rather than
+leaking English into someone's session.
+
+Translate the interface only. Lottery labels, pool names and player names come
+from configuration, and the weekday keys in the config file (`monday`, …) are
+a file format rather than text for reading — both stay as they are.
+
 ## Regenerating the README image
 
 `docs/demo.gif` is recorded from a real run, not drawn by hand. It needs

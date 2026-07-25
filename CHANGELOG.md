@@ -25,14 +25,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Windows, and exercises both installers end to end on each.
 - Past draws are struck through when a plan is shown again, so what is left to
   play stands out.
+- **Translations.** The interface is available in English, French, Spanish and
+  German, chosen with `--lang`, `BLINDGRID_LANG`, the config file or your
+  system locale. Tests enforce that every catalogue matches the English one
+  key for key and placeholder for placeholder.
 
-- A month is now drawn once. `generate` saves the plan to
-  `~/.local/state/blindgrid/plan.json` and shows it again on later runs, so it
-  can be found while the grids are being filled in. `--force` draws a new one
-  and states what it replaces.
+- A month is now drawn once. `generate` saves the plan to the state directory
+  and shows it again on later runs, so it can be found while the grids are
+  being filled in. `--force` draws a new one and states what it replaces.
 - `config show` reports where the current plan lives and when it was drawn.
 
 ### Changed
+
+- Number columns line up across the whole plan. Lotteries of different shapes
+  used to leave the separator and pool names drifting from row to row, which
+  is exactly the wrong thing when numbers are being copied onto a slip.
+  Weights share one precision so their decimal points align.
+- Amounts accept the way people type them: `30 €`, `30€`, `30 EUR`, commas and
+  non-breaking spaces. Nonsense is still refused.
+- `--lang` is accepted before the command as well as after it.
 
 - The stored plan is one file, replaced when the month turns, and a
   self-contained snapshot: editing the configuration afterwards does not alter
@@ -40,6 +51,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   what it was protecting against — an accumulated history of past grids, which
   is still out of scope — while removing the ability to reroll a month until
   the numbers look right.
+
+### Fixed
+
+- The help screen no longer mixed languages: Typer takes a command's docstring
+  as its help text unless told otherwise, which left the top-level commands in
+  English while the sub-apps were translated.
+- The message shown when no configuration exists yet — the first thing a new
+  user sees — is translated.
+- A language given before the command is no longer overwritten when the
+  configuration is read.
 
 ## [0.1.0] - 2026-07-25
 

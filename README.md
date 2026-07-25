@@ -20,6 +20,7 @@
   <a href="#install">Install</a> ·
   <a href="#what-this-is-not">What it refuses to do</a> ·
   <a href="#playing-as-a-household">Households</a> ·
+  <a href="#language">Language</a> ·
   <a href="#adding-a-lottery-from-any-country">Add your own lottery</a> ·
   <a href="#responsible-gambling">Responsible gambling</a>
 </p>
@@ -233,6 +234,30 @@ Useful options on `generate`:
 | `-m, --month 2026-09` | Plan a month other than the current one. |
 | `--force` | Draw a new plan even though this month already has one. |
 | `--no-export` | Print the plan without writing `plan.md`. |
+
+## Language
+
+The interface speaks **English, French, Spanish and German**. It follows your
+system locale by default, so there is usually nothing to set:
+
+```bash
+blindgrid generate --lang fr     # just this run
+blindgrid config edit            # pick one and keep it
+export BLINDGRID_LANG=es         # for a shell session
+```
+
+Order of precedence: `--lang`, then `BLINDGRID_LANG`, then `language` in the
+config file, then your system locale, then English.
+
+Only the interface is translated. Lottery labels, pool names and player names
+are printed exactly as you wrote them, and the weekday keys in the config file
+stay English (`monday`, `tuesday`, …) — those are a file format, not text for
+reading.
+
+Adding a language is one file in `src/blindgrid/i18n/` plus one line in its
+`__init__.py`. Tests check that every catalogue carries exactly the same keys
+and placeholders as the English one, so a half-finished translation fails the
+build rather than leaking English sentences into someone's session.
 
 ## Configuration
 

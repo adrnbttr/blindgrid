@@ -177,6 +177,20 @@ The ceiling is the number that matters. `generate` refuses any budget above it
 and there is no override flag, so pick it now rather than in front of a
 jackpot headline.
 
+## Language
+
+The interface is available in English, French, Spanish and German, and follows
+your system locale by default:
+
+```bash
+blindgrid generate --lang fr     # this run only
+blindgrid config edit            # choose one and keep it
+export BLINDGRID_LANG=de         # for a shell session
+```
+
+Precedence: `--lang`, `BLINDGRID_LANG`, the `language` key in your config file,
+your system locale, then English.
+
 ## Troubleshooting
 
 ### `blindgrid: command not found`
