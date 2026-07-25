@@ -148,7 +148,7 @@ function Find-Python {
         try {
             $raw = & $candidate -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>$null
             if ($LASTEXITCODE -ne 0 -or -not $raw) { continue }
-            if ([version]$raw -ge $MinPython) { return (Get-Command $candidate).Source }
+            if ([version]$raw -ge $MinPython) { return , @((Get-Command $candidate).Source) }
         } catch { continue }
     }
 
@@ -157,7 +157,7 @@ function Find-Python {
         foreach ($tag in @('-3.13', '-3.12', '-3.11')) {
             try {
                 & py $tag -c 'import sys' 2>$null
-                if ($LASTEXITCODE -eq 0) { return "py $tag" }
+                if ($LASTEXITCODE -eq 0) { return , @('py', $tag) }
             } catch { continue }
         }
     }
@@ -206,14 +206,14 @@ function Install-WithVenv {
     }
 
     Write-Step 'Installing into a dedicated virtual environment'
-    Write-Info "using $python"
+    Write-Info "using $($python -join ' ')"
 
     if (Test-Path $VenvDir) { Remove-Item -Recurse -Force $VenvDir }
     New-Item -ItemType Directory -Force -Path $Root, $BinDir | Out-Null
 
-    # "py -3.12" arrives as one string and has to be split back into a command.
-    $parts = $python -split ' '
-    & $parts[0] @($parts[1..($parts.Length - 1)]) -m venv $VenvDir
+    # The launcher form is @('py', '-3.12'); a plain interpreter is a single
+    # element. Skip-1 yields an empty array for the latter rather than an error.
+    & $python[0] @($python | Select-Object -Skip 1) -m venv $VenvDir
     if ($LASTEXITCODE -ne 0) { Show-Failure 'Could not create a virtual environment.' }
 
     $venvPython = Join-Path $VenvDir 'Scripts\python.exe'
@@ -304,7 +304,7 @@ Write-Step 'Checking your environment'
 if (Test-Command 'uv')   { Write-Ok 'uv found' }
 if (Test-Command 'pipx') { Write-Ok 'pipx found' }
 $found = Find-Python
-if ($found) { Write-Ok "Python found: $found" } else { Write-Warn "no Python $MinPython or newer on PATH" }
+if ($found) { Write-Ok "Python found: $($found -join ' ')" } else { Write-Warn "no Python $MinPython or newer on PATH" }
 
 $chosen = switch ($Method) {
     'Uv'   { if (Test-Command 'uv')   { 'Uv' }   else { Show-Failure 'uv is not installed. See https://docs.astral.sh/uv/' } }
