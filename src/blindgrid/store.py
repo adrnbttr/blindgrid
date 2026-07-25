@@ -27,6 +27,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from blindgrid import paths
 from blindgrid.errors import StoreError
 from blindgrid.models import (
     WEEKDAY_NAMES,
@@ -39,7 +40,11 @@ from blindgrid.models import (
     money,
 )
 
-SCHEMA_VERSION = 1
+# 1: single player. 2: adds the player each allocation and draw belongs to.
+# Older files still load — a plan drawn last month should not be lost to an
+# upgrade — and are read as belonging to nobody in particular.
+SCHEMA_VERSION = 2
+READABLE_VERSIONS = frozenset({1, 2})
 ENV_VAR = "BLINDGRID_STATE"
 FILENAME = "plan.json"
 
@@ -57,8 +62,7 @@ def default_path() -> Path:
     override = os.environ.get(ENV_VAR)
     if override:
         return Path(override).expanduser()
-    state_home = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
-    return Path(state_home).expanduser() / "blindgrid" / FILENAME
+    return paths.state_dir() / FILENAME
 
 
 def _lottery_to_dict(lottery: Lottery) -> dict[str, Any]:
@@ -96,12 +100,14 @@ def to_dict(plan: Plan, drawn_on: datetime) -> dict[str, Any]:
         "year": plan.year,
         "month": plan.month,
         "budget": str(plan.budget),
+        "player_budgets": [[name, str(amount)] for name, amount in plan.player_budgets],
         "allocations": [
             {
                 "lottery": _lottery_to_dict(a.lottery),
                 "share": str(a.share),
                 "grid_count": a.grid_count,
                 "note": a.note,
+                "player": a.player,
             }
             for a in plan.allocations
         ],
@@ -109,6 +115,7 @@ def to_dict(plan: Plan, drawn_on: datetime) -> dict[str, Any]:
             {
                 "date": d.draw_date.isoformat(),
                 "lottery": d.lottery.label,
+                "player": d.player,
                 "grids": [{"pool": g.pool_name, "numbers": list(g.numbers)} for g in d.grids],
             }
             for d in plan.draws
@@ -119,9 +126,10 @@ def to_dict(plan: Plan, drawn_on: datetime) -> dict[str, Any]:
 def from_dict(data: dict[str, Any]) -> StoredPlan:
     """Rebuild a plan from the mapping written by :func:`to_dict`."""
     schema = data.get("schema")
-    if schema != SCHEMA_VERSION:
+    if schema not in READABLE_VERSIONS:
         raise StoreError(
-            f"saved plan uses format version {schema!r}, this build expects {SCHEMA_VERSION}"
+            f"saved plan uses format version {schema!r}, this build reads "
+            f"{', '.join(str(v) for v in sorted(READABLE_VERSIONS))}"
         )
 
     try:
@@ -131,15 +139,22 @@ def from_dict(data: dict[str, Any]) -> StoredPlan:
                 share=money(entry["share"]),
                 grid_count=int(entry["grid_count"]),
                 note=entry["note"],
+                player=entry.get("player"),
             )
             for entry in data["allocations"]
         )
+        # The same lottery carries a different weight for each player, so a
+        # draw has to be matched back to its own player's copy.
+        by_owner = {(a.player, a.lottery.label): a.lottery for a in allocations}
         by_label = {a.lottery.label: a.lottery for a in allocations}
 
         draws = tuple(
             PlannedDraw(
                 draw_date=date.fromisoformat(entry["date"]),
-                lottery=by_label[entry["lottery"]],
+                lottery=by_owner.get(
+                    (entry.get("player"), entry["lottery"]), by_label[entry["lottery"]]
+                ),
+                player=entry.get("player"),
                 grids=tuple(
                     Grid(pool_name=str(g["pool"]), numbers=tuple(int(n) for n in g["numbers"]))
                     for g in entry["grids"]
@@ -154,6 +169,9 @@ def from_dict(data: dict[str, Any]) -> StoredPlan:
             budget=money(data["budget"]),
             allocations=allocations,
             draws=draws,
+            player_budgets=tuple(
+                (str(name), money(amount)) for name, amount in data.get("player_budgets", [])
+            ),
         )
         drawn_on = datetime.fromisoformat(data["drawn_on"])
     except (KeyError, TypeError, ValueError) as exc:

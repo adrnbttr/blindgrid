@@ -10,7 +10,7 @@ import pytest
 
 from blindgrid import config
 from blindgrid.errors import ConfigError
-from blindgrid.models import Lottery, Pool
+from blindgrid.models import Lottery, Player, Pool
 
 MINIMAL = """
 max_monthly_budget = 30.00
@@ -181,3 +181,97 @@ def test_the_env_var_overrides_the_lookup(tmp_path: Path, monkeypatch: pytest.Mo
     target = tmp_path / "elsewhere.toml"
     monkeypatch.setenv(config.ENV_VAR, str(target))
     assert config.default_path() == target
+
+
+# ------------------------------------------------------------------- players
+
+PLAYERS = """
+[[player]]
+name = "Adrien"
+max_monthly_budget = 40.00
+  [player.weight]
+  Powerball = 1.0
+
+[[player]]
+name = "Marie"
+max_monthly_budget = 25.00
+  [player.weight]
+  Powerball = 0.5
+"""
+
+
+def test_no_player_means_solo_mode() -> None:
+    settings = parse(MINIMAL)
+    assert settings.players == ()
+    assert settings.is_household is False
+
+
+def test_players_are_parsed_with_their_own_ceiling_and_weights() -> None:
+    settings = parse(MINIMAL + PLAYERS)
+    adrien, marie = settings.players
+
+    assert settings.is_household
+    assert adrien.name == "Adrien"
+    assert adrien.max_monthly_budget == Decimal("40.00")
+    assert adrien.weights == {"Powerball": 1.0}
+    assert marie.max_monthly_budget == Decimal("25.00")
+    assert marie.weights == {"Powerball": 0.5}
+
+
+def test_a_player_weight_naming_an_unknown_lottery_is_rejected() -> None:
+    with pytest.raises(ConfigError, match="unknown lottery"):
+        parse(MINIMAL + PLAYERS.replace("Powerball = 1.0", "Keno = 1.0"))
+
+
+def test_a_player_without_a_ceiling_is_rejected() -> None:
+    with pytest.raises(ConfigError, match="max_monthly_budget"):
+        parse(MINIMAL + PLAYERS.replace("max_monthly_budget = 40.00", ""))
+
+
+def test_a_zero_ceiling_is_rejected() -> None:
+    with pytest.raises(ConfigError, match="must be positive"):
+        parse(MINIMAL + PLAYERS.replace("max_monthly_budget = 40.00", "max_monthly_budget = 0"))
+
+
+def test_duplicate_player_names_are_rejected() -> None:
+    with pytest.raises(ConfigError, match="duplicate player"):
+        parse(MINIMAL + PLAYERS.replace('name = "Marie"', 'name = "Adrien"'))
+
+
+def test_a_player_plays_only_what_they_weight() -> None:
+    settings = parse(MINIMAL + PLAYERS)
+    (lottery,) = settings.lotteries
+    adrien = settings.find_player("adrien")
+
+    assert adrien.plays(lottery)
+    assert adrien.weight_for(lottery) == 1.0
+    assert settings.lotteries_for(adrien) == (lottery,)
+
+
+def test_a_zero_weight_means_the_player_skips_that_lottery() -> None:
+    settings = parse(MINIMAL + PLAYERS.replace("Powerball = 0.5", "Powerball = 0.0"))
+    marie = settings.find_player("Marie")
+
+    assert not marie.plays(settings.lotteries[0])
+    assert settings.lotteries_for(marie) == ()
+
+
+def test_players_survive_a_save_and_reload(tmp_path: Path) -> None:
+    original = parse(MINIMAL + PLAYERS)
+    reloaded = config.load(config.save(original, tmp_path / "config.toml"))
+    assert reloaded.players == original.players
+
+
+def test_adding_a_player_appends_then_replaces() -> None:
+    settings = parse(MINIMAL)
+    added = config.with_player(settings, Player("Adrien", Decimal("40.00"), {"Powerball": 1.0}))
+    assert [p.name for p in added.players] == ["Adrien"]
+
+    updated = config.with_player(added, Player("Adrien", Decimal("10.00"), {"Powerball": 2.0}))
+    assert len(updated.players) == 1
+    assert updated.players[0].max_monthly_budget == Decimal("10.00")
+
+
+def test_removing_a_player_is_case_insensitive() -> None:
+    settings = parse(MINIMAL + PLAYERS)
+    assert [p.name for p in config.without_player(settings, "marie").players] == ["Adrien"]

@@ -23,6 +23,11 @@ The README explains the reasoning; this is the short version.
   something cannot be expressed as a price, a set of draw days and pools of
   numbers, open an issue and let's discuss the model rather than special-case
   the code.
+- **Claiming that spreading a household's draws improves anyone's odds.** It
+  does not. Two grids are two independent chances whether they sit on one draw
+  or two. Spreading buys exposure to more distinct jackpots and avoids
+  near-duplicate tickets in one house; the wording in the code and docs says
+  exactly that, and should stay that way.
 
 Everything else is fair game: better rendering, clearer errors, more
 platforms, faster tests, documentation.
@@ -42,13 +47,25 @@ uv pip install -e ".[dev]"
 ruff check .
 ruff format .
 pytest
-shellcheck install.sh   # only if you touched the installer
+shellcheck install.sh   # only if you touched the Unix installer
 ```
 
-CI runs the same commands on Python 3.11, 3.12 and 3.13, and a pull request
-needs them green. It also installs the project with `install.sh` on a clean
-runner and uninstalls it again, so a change there is exercised for real rather
-than merely linted.
+CI runs the same commands on Linux (3.11, 3.12, 3.13), macOS and Windows, and
+a pull request needs them green. It also installs the project with
+`install.sh` and `install.ps1` on clean runners and uninstalls them again, so
+a change to either is exercised for real rather than merely linted.
+
+If you touched `install.ps1` and have no Windows machine, push and let CI run
+PSScriptAnalyzer and the install-uninstall round trip — that is how it is
+maintained here.
+
+### Platform-specific code
+
+There is exactly one place that branches on the operating system:
+`src/blindgrid/paths.py`, which decides where configuration and state live.
+Everything else is platform-neutral, and should stay that way. `tests/
+test_paths.py` fakes each platform, so both layouts are checked wherever the
+suite runs.
 
 ## Conventions
 

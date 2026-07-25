@@ -19,3 +19,8 @@ htmlcov/
 
 # OS
 .DS_Store
+
+# Not committed: this is an application installed from source, not a
+# reproducible deployment. Pinning here would freeze contributors to one
+# resolution of the dependency tree.
+uv.lock

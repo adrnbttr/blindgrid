@@ -30,13 +30,17 @@ def to_markdown(plan: Plan) -> str:
         "",
     ]
 
+    player_column = "Player | " if plan.is_household else ""
+    player_rule = "--- | " if plan.is_household else ""
+
     if plan.draws:
         lines += [
-            "| Date | Day | Lottery | Numbers | Cost |",
-            "| --- | --- | --- | --- | ---: |",
+            f"| Date | Day | {player_column}Lottery | Numbers | Cost |",
+            f"| --- | --- | {player_rule}--- | --- | ---: |",
         ]
         lines += [
-            f"| {draw.draw_date.isoformat()} | {draw.weekday_name} | {draw.lottery.label} "
+            f"| {draw.draw_date.isoformat()} | {draw.weekday_name} "
+            f"| {draw.player + ' | ' if plan.is_household else ''}{draw.lottery.label} "
             f"| {_numbers(draw.grids)} "
             f"| {format_money(draw.cost, draw.lottery.currency)} |"
             for draw in plan.draws
@@ -44,15 +48,33 @@ def to_markdown(plan: Plan) -> str:
     else:
         lines.append("No draw could be planned with this budget.")
 
+    if plan.is_household:
+        lines += [
+            "",
+            "## Per player",
+            "",
+            "| Player | Budget | Committed | Grids | Unspent |",
+            "| --- | ---: | ---: | ---: | ---: |",
+        ]
+        lines += [
+            f"| {name} "
+            f"| {format_money(plan.budget_of(name), plan.currency)} "
+            f"| {format_money(plan.committed_by(name), plan.currency)} "
+            f"| {sum(1 for d in plan.draws if d.player == name)} "
+            f"| {format_money(plan.budget_of(name) - plan.committed_by(name), plan.currency)} |"
+            for name in plan.player_names
+        ]
+
     lines += [
         "",
         "## Budget allocation",
         "",
-        "| Lottery | Weight | Allocated | Committed | Grids | Unused |",
-        "| --- | ---: | ---: | ---: | ---: | ---: |",
+        f"| {player_column}Lottery | Weight | Allocated | Committed | Grids | Unused |",
+        f"| {player_rule}--- | ---: | ---: | ---: | ---: | ---: |",
     ]
     lines += [
-        f"| {a.lottery.label} | {a.lottery.weight:g} "
+        f"| {a.player + ' | ' if plan.is_household else ''}{a.lottery.label} "
+        f"| {a.lottery.weight:g} "
         f"| {format_money(a.share, a.lottery.currency)} "
         f"| {format_money(a.committed, a.lottery.currency)} "
         f"| {a.grid_count} "
@@ -60,7 +82,19 @@ def to_markdown(plan: Plan) -> str:
         for a in plan.allocations
     ]
 
-    annotations = [(a.lottery.label, a.note) for a in plan.allocations if a.note]
+    annotations = [
+        (f"{a.player} · {a.lottery.label}" if a.player else a.lottery.label, a.note)
+        for a in plan.allocations
+        if a.note
+    ]
+    if plan.shared_dates():
+        annotations.append(
+            (
+                "Shared draws",
+                f"{len(plan.shared_dates())} draw(s) are played by more than one person. "
+                f"Sharing a draw costs nothing in odds.",
+            )
+        )
     if annotations:
         lines += ["", "### Notes", ""]
         lines += [f"- **{label}**: {note}" for label, note in annotations]

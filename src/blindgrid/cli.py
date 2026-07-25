@@ -27,8 +27,8 @@ from blindgrid.errors import BlindgridError, BudgetError, ConfigError, StoreErro
 from blindgrid.export import export_plan
 from blindgrid.filters import RULES
 from blindgrid.generator import system_rng
-from blindgrid.models import WEEKDAY_NAMES, Lottery, Plan, Pool, money
-from blindgrid.plan import build_plan
+from blindgrid.models import WEEKDAY_NAMES, Lottery, Plan, Player, Pool, money
+from blindgrid.plan import build_household_plan, build_plan
 from blindgrid.render import render_plan
 
 console = Console()
@@ -45,8 +45,10 @@ app = typer.Typer(
 )
 config_app = typer.Typer(help="Inspect and edit the configuration.", no_args_is_help=False)
 lottery_app = typer.Typer(help="Manage lottery definitions.", no_args_is_help=True)
+player_app = typer.Typer(help="Manage the people who play.", no_args_is_help=True)
 app.add_typer(config_app, name="config", invoke_without_command=True)
 app.add_typer(lottery_app, name="lottery")
+app.add_typer(player_app, name="player")
 
 ConfigOption = Annotated[
     Path | None,
@@ -97,21 +99,23 @@ def _resolve_month(spec: str | None) -> tuple[int, int]:
     return year, month
 
 
-def _parse_budget(raw: str, ceiling: Decimal) -> Decimal:
+def _parse_budget(raw: str, ceiling: Decimal, who: str | None = None) -> Decimal:
     """Validate a budget against the configured hard ceiling.
 
     The ceiling has no override, by design. A budget cap that can be raised in
-    the moment is not a cap.
+    the moment is not a cap. Each player has their own, and nobody can spend
+    against anyone else's.
     """
+    owner = f"{who}: " if who else ""
     try:
         amount = money(raw.strip().replace(",", "."))
     except (InvalidOperation, ValueError) as exc:
-        raise BudgetError(f"{raw!r} is not a valid amount") from exc
+        raise BudgetError(f"{owner}{raw!r} is not a valid amount") from exc
     if amount <= 0:
-        raise BudgetError("Budget must be greater than zero.")
+        raise BudgetError(f"{owner}budget must be greater than zero.")
     if amount > ceiling:
         raise BudgetError(
-            f"Budget of {amount} exceeds the configured ceiling of {ceiling}. "
+            f"{owner}budget of {amount} exceeds the configured ceiling of {ceiling}. "
             f"Raise max_monthly_budget in your config if this is a considered decision."
         )
     return amount
@@ -159,6 +163,67 @@ def _select_lotteries(
     return tuple(lot for lot in available if lot.label in set(picked))
 
 
+def _collect_budgets(
+    settings: config.Settings,
+    requested: list[str] | None,
+    only: list[str] | None,
+) -> dict[str, Decimal]:
+    """Work out how much each player is putting in this month.
+
+    ``requested`` holds ``Name=amount`` pairs from the command line. Anyone not
+    covered there is asked, and an empty answer means they sit this month out.
+    """
+    players = settings.players
+    if only:
+        wanted = {name.casefold() for name in only}
+        for name in only:
+            if settings.find_player(name) is None:
+                _fatal(f"Unknown player {name!r}. Configured: {', '.join(p.name for p in players)}")
+        players = tuple(p for p in players if p.name.casefold() in wanted)
+
+    given: dict[str, str] = {}
+    for pair in requested or []:
+        name, separator, amount = pair.partition("=")
+        if not separator:
+            _fatal(
+                f"With players configured, --budget takes NAME=AMOUNT, for example "
+                f"--budget '{players[0].name}=30'. Got {pair!r}."
+            )
+        player = settings.find_player(name.strip())
+        if player is None:
+            _fatal(
+                f"Unknown player {name.strip()!r}. Configured: "
+                f"{', '.join(p.name for p in settings.players)}"
+            )
+        given[player.name] = amount.strip()
+
+    budgets: dict[str, Decimal] = {}
+    for player in players:
+        raw = given.get(player.name)
+        if raw is None:
+            console.print()
+            console.print(
+                Text(f"{player.name}", style="bold magenta")
+                + Text(f" — ceiling {player.max_monthly_budget}, plays ", style="dim")
+                + Text(
+                    ", ".join(lot.label for lot in settings.lotteries_for(player)) or "nothing",
+                    style="dim",
+                )
+            )
+            raw = str(
+                _answer(
+                    questionary.text(f"Budget for {player.name}? (blank to sit this month out)")
+                )
+            ).strip()
+        if not raw:
+            continue
+        budgets[player.name] = _parse_budget(raw, player.max_monthly_budget, player.name)
+
+    if not budgets:
+        _fatal("Nobody is playing this month.")
+    return budgets
+
+
 def _finish(plan: Plan, settings: config.Settings, export: bool) -> None:
     """Render a plan and, unless asked not to, refresh the Markdown export."""
     render_plan(plan, console)
@@ -172,12 +237,20 @@ def _finish(plan: Plan, settings: config.Settings, export: bool) -> None:
 def generate(
     config_path: ConfigOption = None,
     budget: Annotated[
-        str | None,
-        typer.Option("--budget", "-b", help="Skip the prompt and use this budget."),
+        list[str] | None,
+        typer.Option(
+            "--budget",
+            "-b",
+            help="Budget to use. With players configured: NAME=AMOUNT, repeatable.",
+        ),
     ] = None,
     lottery: Annotated[
         list[str] | None,
-        typer.Option("--lottery", "-l", help="Include this lottery. Repeatable."),
+        typer.Option("--lottery", "-l", help="Include this lottery. Repeatable. Solo mode only."),
+    ] = None,
+    player: Annotated[
+        list[str] | None,
+        typer.Option("--player", "-p", help="Limit the plan to these players. Repeatable."),
     ] = None,
     month: Annotated[
         str | None,
@@ -230,27 +303,46 @@ def generate(
         )
         console.print()
 
-    console.print(
-        Text("Monthly ceiling: ", style="dim")
-        + Text(f"{settings.max_monthly_budget}", style="bold")
-    )
-
-    if budget is None:
-        budget = str(_answer(questionary.text("Budget for this month?")))
+    today = date.today()
+    not_before = today if (year, month_number) == (today.year, today.month) else None
 
     try:
-        amount = _parse_budget(budget, settings.max_monthly_budget)
-        selected = _select_lotteries(settings, lottery)
-        today = date.today()
-        plan = build_plan(
-            budget=amount,
-            lotteries=selected,
-            year=year,
-            month=month_number,
-            rng=system_rng(),
-            enabled_filters=settings.enabled_filters,
-            not_before=today if (year, month_number) == (today.year, today.month) else None,
-        )
+        if settings.is_household:
+            if lottery:
+                _fatal(
+                    "--lottery applies to solo mode. With players configured, each "
+                    "person's lotteries come from their own weights."
+                )
+            budgets = _collect_budgets(settings, budget, player)
+            plan = build_household_plan(
+                budgets=budgets,
+                players=settings.players,
+                lotteries=settings.lotteries,
+                year=year,
+                month=month_number,
+                rng=system_rng(),
+                enabled_filters=settings.enabled_filters,
+                not_before=not_before,
+            )
+        else:
+            if player:
+                _fatal(
+                    "--player needs players in your config. Add one with 'blindgrid player add'."
+                )
+            console.print(
+                Text("Monthly ceiling: ", style="dim")
+                + Text(f"{settings.max_monthly_budget}", style="bold")
+            )
+            raw = budget[0] if budget else str(_answer(questionary.text("Budget for this month?")))
+            plan = build_plan(
+                budget=_parse_budget(raw, settings.max_monthly_budget),
+                lotteries=_select_lotteries(settings, lottery),
+                year=year,
+                month=month_number,
+                rng=system_rng(),
+                enabled_filters=settings.enabled_filters,
+                not_before=not_before,
+            )
     except BlindgridError as exc:
         _fatal(exc)
 
@@ -440,6 +532,143 @@ def lottery_add(config_path: ConfigOption = None) -> None:
 
     written = config.save(config.with_lottery(settings, lottery), config_path)
     console.print(Text(f"Saved {lottery.label} to {written}", style="green"))
+
+
+def _ask_weights(settings: config.Settings, existing: Player | None) -> dict[str, float]:
+    """Ask which lotteries someone plays, then how they split their budget."""
+    if not settings.lotteries:
+        _fatal("Add a lottery first with 'blindgrid lottery add'.")
+
+    chosen = _answer(
+        questionary.checkbox(
+            "Which lotteries does this person play?",
+            choices=[
+                questionary.Choice(
+                    title=f"{lot.label} — {lot.price_per_grid} {lot.currency} per grid",
+                    value=lot.label,
+                    checked=existing.plays(lot) if existing else True,
+                )
+                for lot in settings.lotteries
+            ],
+        )
+    )
+    if not chosen:
+        _fatal("Someone who plays nothing has nothing to plan.")
+
+    console.print()
+    console.print(
+        Text("Weights are relative shares of that person's budget, not draw counts. ", style="dim")
+    )
+    console.print(
+        Text("Equal weights split it evenly; 0.5 means half as much as a 1.0.", style="dim")
+    )
+
+    weights: dict[str, float] = {}
+    for label in chosen:  # type: ignore[union-attr]
+        default = existing.weights.get(label, 1.0) if existing else 1.0
+        raw = str(_answer(questionary.text(f"Weight for {label}?", default=f"{default:g}"))).strip()
+        try:
+            value = float(raw.replace(",", "."))
+        except ValueError:
+            _fatal(f"{raw!r} is not a number")
+        if value <= 0:
+            _fatal(f"Weight for {label} must be greater than zero, or leave it unchecked.")
+        weights[label] = value
+    return weights
+
+
+@player_app.command("add")
+def player_add(config_path: ConfigOption = None) -> None:
+    """Add someone who plays, or update them if the name already exists.
+
+    Everyone keeps their own ceiling and their own lotteries. Configuring a
+    second person switches `generate` to household mode, where draws are spread
+    across dates so the same game is not played twice on the same day.
+    """
+    settings = _load(config_path)
+
+    name = str(_answer(questionary.text("Name?"))).strip()
+    if not name:
+        _fatal("A player needs a name.")
+
+    existing = settings.find_player(name)
+    if existing is not None:
+        console.print(Text(f"Updating {existing.name}.", style="dim"))
+
+    ceiling = str(
+        _answer(
+            questionary.text(
+                f"Hard monthly ceiling for {name}?",
+                default=str(existing.max_monthly_budget)
+                if existing
+                else str(settings.max_monthly_budget),
+            )
+        )
+    )
+    weights = _ask_weights(settings, existing)
+
+    try:
+        player = Player(
+            name=name,
+            max_monthly_budget=money(ceiling.strip().replace(",", ".")),
+            weights=weights,
+        )
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        _fatal(exc)
+
+    written = config.save(config.with_player(settings, player), config_path)
+    console.print(Text(f"Saved {player.name} to {written}", style="green"))
+    if len(settings.players) == 0:
+        console.print(
+            Text("Add a second person and 'generate' will plan for the household.", style="dim")
+        )
+
+
+@player_app.command("list")
+def player_list(config_path: ConfigOption = None) -> None:
+    """Show everyone who plays, with their ceiling and preferences."""
+    settings = _load(config_path)
+    if not settings.players:
+        console.print()
+        console.print(Text("No players configured — 'generate' plans for one person.", style="dim"))
+        console.print(Text("Add someone with 'blindgrid player add'.", style="dim"))
+        console.print()
+        return
+
+    table = Table(box=box.ROUNDED, header_style="bold", padding=(0, 1))
+    table.add_column("Player", style="bold magenta")
+    table.add_column("Ceiling", justify="right")
+    table.add_column("Plays")
+
+    for person in settings.players:
+        table.add_row(
+            person.name,
+            str(person.max_monthly_budget),
+            ", ".join(
+                f"{lot.label} ({person.weight_for(lot):g})"
+                for lot in settings.lotteries_for(person)
+            )
+            or "nothing",
+        )
+    console.print()
+    console.print(table)
+    console.print()
+
+
+@player_app.command("remove")
+def player_remove(
+    name: Annotated[str, typer.Argument(help="Who to remove.")],
+    config_path: ConfigOption = None,
+) -> None:
+    """Remove someone. Their configuration is deleted, nothing else."""
+    settings = _load(config_path)
+    if settings.find_player(name) is None:
+        _fatal(
+            f"Unknown player {name!r}. Configured: "
+            f"{', '.join(p.name for p in settings.players) or 'none'}"
+        )
+    written = config.save(config.without_player(settings, name), config_path)
+    console.print(Text(f"Removed {name} from {written}", style="green"))
 
 
 @app.command()

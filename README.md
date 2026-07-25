@@ -19,6 +19,7 @@
 <p>
   <a href="#install">Install</a> ·
   <a href="#what-this-is-not">What it refuses to do</a> ·
+  <a href="#playing-as-a-household">Households</a> ·
   <a href="#adding-a-lottery-from-any-country">Add your own lottery</a> ·
   <a href="#responsible-gambling">Responsible gambling</a>
 </p>
@@ -75,17 +76,27 @@ different kind of predictable.
 
 ## Install
 
+Runs on Linux, macOS and Windows.
+
+**macOS and Linux**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/adrnbttr/blindgrid/main/install.sh | bash
 ```
 
-That installs into your home directory, writes a starter config to
-`~/.config/blindgrid/`, and tells you what to add to your `PATH` if anything is
-missing. It never uses `sudo` and never writes outside `$HOME`. Prefer to read
-it before running it? `curl -fsSLO <the same url> && less install.sh` — it is
-short, and shellcheck runs against it in CI.
+**Windows** (PowerShell)
 
-If you already have a favourite tool, skip the script:
+```powershell
+irm https://raw.githubusercontent.com/adrnbttr/blindgrid/main/install.ps1 | iex
+```
+
+Either one installs into your own user profile, writes a starter config, and
+tells you what to add to your `PATH` if anything is missing. Neither asks for
+`sudo` or administrator rights, and neither writes outside your home
+directory. Prefer to read the script first? Download it and open it — both are
+short, and both are linted in CI (shellcheck, PSScriptAnalyzer).
+
+If you already have a favourite tool, skip the script entirely:
 
 ```bash
 uv tool install git+https://github.com/adrnbttr/blindgrid.git
@@ -93,10 +104,11 @@ pipx install git+https://github.com/adrnbttr/blindgrid.git
 ```
 
 Python 3.11 or newer is required, except with uv, which brings its own.
-Removal is `bash install.sh --uninstall`, and your config survives it.
+Uninstalling is `install.sh --uninstall` / `install.ps1 -Uninstall`, and your
+config survives it.
 
-**[Full installation guide](docs/installation.md)** — other install methods,
-requirements, troubleshooting, updating, uninstalling.
+**[Full installation guide](docs/installation.md)** — per-platform details,
+other install methods, file locations, troubleshooting, updating, uninstalling.
 
 ## Use
 
@@ -126,9 +138,80 @@ exactly the bias the filters exist to remove.
 `--force` is there for the genuine mistake, a mistyped budget or the wrong
 lotteries. It says what it is replacing before it does it.
 
-The plan lives in `~/.local/state/blindgrid/plan.json`, one file, replaced when
-the month turns. It is a self-contained snapshot, so editing your config
-afterwards never changes a plan you already hold.
+The plan lives in one file in your state directory (see
+[file locations](docs/installation.md#where-files-live)), replaced when the
+month turns. It is a self-contained snapshot, so editing your config
+afterwards never changes a plan you already hold. Draws whose date has passed
+are struck through when the plan is shown again, so what is left to play is
+obvious.
+
+## Playing as a household
+
+Two people, one month, one command. Everyone keeps their own ceiling and their
+own games:
+
+```bash
+blindgrid player add     # name, ceiling, which lotteries, what weights
+blindgrid generate       # asks each person for their budget, then plans
+```
+
+```
+╭────────────┬───────────┬────────┬──────────────┬──────────────────────────┬──────────╮
+│ Date       │ Day       │ Player │ Lottery      │ Numbers                  │     Cost │
+├────────────┼───────────┼────────┼──────────────┼──────────────────────────┼──────────┤
+│ 2026-09-11 │ Friday    │ Adrien │ EuroMillions │ 10 11 22 35 36 · stars…  │ 2.50 EUR │
+│ 2026-09-19 │ Saturday  │ Marie  │ Loto         │  4  5 10 38 42 · lucky 3 │ 2.20 EUR │
+│ 2026-09-21 │ Monday    │ Marie  │ EuroDreams   │  7  9 18 32 34 · dream 5 │ 2.50 EUR │
+╰────────────┴───────────┴────────┴──────────────┴──────────────────────────┴──────────╯
+```
+
+Three things hold:
+
+- **Nobody spends against anyone else's ceiling.** Each person has their own
+  `max_monthly_budget`, and one player's budget never changes another's share.
+  There is no household cap, on purpose: if two people together want to spend
+  more than they should, that is a conversation, not something software gets
+  to arbitrate.
+- **Everyone plays only their own games.** Weights are per person; a weight of
+  zero, or simply leaving a lottery out, means they never play it.
+- **Draws are spread out.** The household covers as many different draws as it
+  can before any date is played twice.
+
+### On spreading draws
+
+Spreading **does not improve anyone's odds**, and the tool will never claim it
+does. Two grids are two independent chances whether they sit on the same draw
+or on two different ones, and the probability that at least one of them wins
+is identical either way.
+
+What it does buy is exposure to more distinct jackpots — some of which have
+rolled over and are larger — and the certainty that two people in one house
+are not holding near-duplicate tickets for a single draw. That is
+diversification, not an edge.
+
+When there are fewer draws left than grids to play, dates are shared rather
+than grids dropped, and the output says which. Losing a grid someone budgeted
+for, to satisfy a rule that does not change the odds, would be the wrong
+trade.
+
+```toml
+[[player]]
+name = "Adrien"
+max_monthly_budget = 40.00
+  [player.weight]
+  EuroMillions = 1.0
+  Loto = 1.0
+  EuroDreams = 0.4
+
+[[player]]
+name = "Marie"
+max_monthly_budget = 25.00
+  [player.weight]
+  Loto = 1.0
+  EuroDreams = 1.0
+```
+
+Declare nobody and blindgrid stays in single-player mode, exactly as before.
 
 ```
 Usage: blindgrid [OPTIONS] COMMAND [ARGS]...
@@ -136,6 +219,7 @@ Usage: blindgrid [OPTIONS] COMMAND [ARGS]...
   generate    Build this month's plan: how much to spend, which draws, which numbers.
   config      Inspect and edit the configuration.
   lottery     Manage lottery definitions.
+  player      Manage the people who play.
   version     Print the installed version.
 ```
 
@@ -143,8 +227,9 @@ Useful options on `generate`:
 
 | Option | Effect |
 | --- | --- |
-| `-b, --budget 30` | Skip the prompt and use this amount. |
-| `-l, --lottery Loto` | Include a specific lottery. Repeatable. |
+| `-b, --budget 30` | Skip the prompt and use this amount. With players: `-b "Adrien=30"`, repeatable. |
+| `-l, --lottery Loto` | Include a specific lottery. Repeatable. Single-player mode only. |
+| `-p, --player Marie` | Limit the plan to these people. Repeatable. |
 | `-m, --month 2026-09` | Plan a month other than the current one. |
 | `--force` | Draw a new plan even though this month already has one. |
 | `--no-export` | Print the plan without writing `plan.md`. |

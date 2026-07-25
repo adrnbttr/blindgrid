@@ -12,14 +12,25 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Windows consoles still default to a legacy code page, and the tables are
+  # drawn with box characters.
+  PYTHONIOENCODING: utf-8
+
 jobs:
   test:
-    name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        include:
+          - { os: ubuntu-latest, python-version: "3.11", name: "Linux · 3.11" }
+          - { os: ubuntu-latest, python-version: "3.12", name: "Linux · 3.12" }
+          - { os: ubuntu-latest, python-version: "3.13", name: "Linux · 3.13" }
+          - { os: macos-latest, python-version: "3.13", name: "macOS · 3.13" }
+          - { os: windows-latest, python-version: "3.11", name: "Windows · 3.11" }
+          - { os: windows-latest, python-version: "3.13", name: "Windows · 3.13" }
 
     steps:
       - uses: actions/checkout@v5
@@ -30,22 +41,31 @@ jobs:
           enable-cache: true
 
       - name: Install the package
-        run: |
-          uv venv --python ${{ matrix.python-version }}
-          uv pip install -e ".[dev]"
-          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+        run: uv venv --python ${{ matrix.python-version }} && uv pip install -e ".[dev]"
 
       - name: Lint
         run: |
-          ruff check .
-          ruff format --check .
+          uv run ruff check .
+          uv run ruff format --check .
 
       - name: Test
-        run: pytest --cov --cov-report=term-missing
+        run: uv run pytest --cov --cov-report=term-missing
 
-  installer:
-    name: Installer
-    runs-on: ubuntu-latest
+      - name: The command runs end to end
+        run: |
+          uv run blindgrid version
+          uv run blindgrid config init --config bg.toml
+          uv run blindgrid --help
+        env:
+          BLINDGRID_CONFIG: bg.toml
+
+  installer-unix:
+    name: Installer · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v5
@@ -69,3 +89,39 @@ jobs:
           bash install.sh --uninstall
           test ! -e "$HOME/.local/bin/blindgrid"
           test -f "$HOME/.config/blindgrid/config.toml"  # config is kept on purpose
+
+  installer-windows:
+    name: Installer · windows
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Lint the script
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -ErrorAction Stop
+          $found = Invoke-ScriptAnalyzer -Path install.ps1 -Severity Error, Warning
+          if ($found) { $found | Format-Table -AutoSize | Out-String | Write-Host; exit 1 }
+          Write-Host 'PSScriptAnalyzer: clean'
+
+      - name: Install from this checkout
+        shell: pwsh
+        run: .\install.ps1 -Method Venv -Source .
+
+      - name: The installed command runs
+        shell: pwsh
+        run: |
+          $shim = Join-Path $env:LOCALAPPDATA 'Programs\blindgrid\blindgrid.cmd'
+          & $shim version
+          & $shim generate -b 20 -l Loto -m 2026-09 --no-export
+          if ($LASTEXITCODE -ne 0) { throw 'generate failed' }
+
+      - name: Uninstall cleanly
+        shell: pwsh
+        run: |
+          .\install.ps1 -Uninstall
+          $shim = Join-Path $env:LOCALAPPDATA 'Programs\blindgrid\blindgrid.cmd'
+          if (Test-Path $shim) { throw 'the shim survived the uninstall' }
+          $config = Join-Path $env:APPDATA 'blindgrid\config.toml'
+          if (-not (Test-Path $config)) { throw 'the configuration was deleted' }

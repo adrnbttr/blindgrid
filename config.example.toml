@@ -29,6 +29,32 @@ central_sum = true        # sum inside a central range for the pool size
 mixed_parity = true       # not all odd, not all even
 spread_decades = true     # not every number inside a single decade
 
+# Who plays. Leave this out entirely and blindgrid plans for one person, using
+# the ceiling above. Declare people here — `blindgrid player add` does it for
+# you — and `generate` switches to household mode: everyone keeps their own
+# ceiling and their own games, and draws are spread across dates so the same
+# game is not played twice on the same day.
+#
+# Spreading does not improve anyone's odds. Two grids are two independent
+# chances whether they sit on one draw or two. It buys exposure to more
+# distinct jackpots, and stops two people in one house holding near-duplicate
+# tickets for the same draw.
+#
+# [[player]]
+# name = "Adrien"
+# max_monthly_budget = 40.00
+#   [player.weight]
+#   EuroMillions = 1.0
+#   Loto = 1.0
+#   EuroDreams = 0.4
+#
+# [[player]]
+# name = "Marie"
+# max_monthly_budget = 25.00
+#   [player.weight]
+#   Loto = 1.0
+#   EuroDreams = 1.0
+
 [[lottery]]
 label = "EuroMillions"
 currency = "EUR"

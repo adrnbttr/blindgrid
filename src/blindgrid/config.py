@@ -23,14 +23,14 @@ from typing import Any
 
 import tomli_w
 
+from blindgrid import paths
 from blindgrid.errors import ConfigError
 from blindgrid.filters import DEFAULT_ENABLED, RULE_NAMES
-from blindgrid.models import WEEKDAY_NAMES, Lottery, Pool, money
+from blindgrid.models import WEEKDAY_NAMES, Lottery, Player, Pool, money
 
 CONFIG_FILENAME = "config.toml"
 EXAMPLE_FILENAME = "config.example.toml"
 ENV_VAR = "BLINDGRID_CONFIG"
-USER_CONFIG_DIR = Path.home() / ".config" / "blindgrid"
 
 DEFAULT_MAX_MONTHLY_BUDGET = Decimal("50.00")
 DEFAULT_EXPORT_PATH = Path("plan.md")
@@ -44,6 +44,7 @@ class Settings:
     export_path: Path
     enabled_filters: frozenset[str]
     lotteries: tuple[Lottery, ...]
+    players: tuple[Player, ...] = ()
     path: Path | None = None
 
     def enabled_lotteries(self) -> tuple[Lottery, ...]:
@@ -55,6 +56,20 @@ class Settings:
         wanted = label.casefold()
         return next((lot for lot in self.lotteries if lot.label.casefold() == wanted), None)
 
+    def find_player(self, name: str) -> Player | None:
+        """Look up a player by name, case-insensitively."""
+        wanted = name.casefold()
+        return next((p for p in self.players if p.name.casefold() == wanted), None)
+
+    @property
+    def is_household(self) -> bool:
+        """Whether players are configured, which switches ``generate`` modes."""
+        return bool(self.players)
+
+    def lotteries_for(self, player: Player) -> tuple[Lottery, ...]:
+        """The lotteries ``player`` actually plays, in configuration order."""
+        return tuple(lottery for lottery in self.lotteries if player.plays(lottery))
+
 
 def default_path() -> Path:
     """The config file this run will read, whether or not it exists yet."""
@@ -64,7 +79,7 @@ def default_path() -> Path:
     local = Path.cwd() / CONFIG_FILENAME
     if local.exists():
         return local
-    return USER_CONFIG_DIR / CONFIG_FILENAME
+    return paths.config_dir() / CONFIG_FILENAME
 
 
 def example_toml() -> str:
@@ -147,6 +162,34 @@ def _parse_lottery(table: dict[str, Any], index: int) -> Lottery:
         raise ConfigError(f"{context}: {exc}") from exc
 
 
+def _parse_player(table: dict[str, Any], index: int, known: set[str]) -> Player:
+    name = table.get("name", f"#{index + 1}")
+    context = f"player {name!r}"
+
+    weights = table.get("weight", {})
+    if not isinstance(weights, dict):
+        raise ConfigError(f"{context}: [player.weight] must be a table of lottery = number")
+
+    unknown = set(weights) - known
+    if unknown:
+        raise ConfigError(
+            f"{context}: unknown lottery in [player.weight]: {', '.join(sorted(unknown))}. "
+            f"Configured: {', '.join(sorted(known))}"
+        )
+
+    try:
+        return Player(
+            name=str(name),
+            max_monthly_budget=_as_decimal(
+                _require(table, "max_monthly_budget", context),
+                f"{context}, max_monthly_budget",
+            ),
+            weights={label: float(weight) for label, weight in weights.items()},
+        )
+    except (TypeError, ValueError) as exc:
+        raise ConfigError(f"{context}: {exc}") from exc
+
+
 def _parse_filters(table: dict[str, Any]) -> frozenset[str]:
     unknown = set(table) - set(RULE_NAMES)
     if unknown:
@@ -167,13 +210,26 @@ def parse(data: dict[str, Any], path: Path | None = None) -> Settings:
     if not isinstance(filters, dict):
         raise ConfigError("[filters] must be a table")
 
+    player_tables = data.get("player", [])
+    if not isinstance(player_tables, list):
+        raise ConfigError("[[player]] must be an array of tables")
+
+    lotteries = tuple(_parse_lottery(table, index) for index, table in enumerate(lottery_tables))
+    known = {lottery.label for lottery in lotteries}
+    players = tuple(_parse_player(table, index, known) for index, table in enumerate(player_tables))
+
+    duplicates = {p.name for p in players if sum(q.name == p.name for q in players) > 1}
+    if duplicates:
+        raise ConfigError(f"duplicate player name(s): {', '.join(sorted(duplicates))}")
+
     return Settings(
         max_monthly_budget=_as_decimal(
             data.get("max_monthly_budget", DEFAULT_MAX_MONTHLY_BUDGET), "max_monthly_budget"
         ),
         export_path=Path(str(data.get("export_path", DEFAULT_EXPORT_PATH))).expanduser(),
         enabled_filters=_parse_filters(filters) if filters else DEFAULT_ENABLED,
-        lotteries=tuple(_parse_lottery(table, index) for index, table in enumerate(lottery_tables)),
+        lotteries=lotteries,
+        players=players,
         path=path,
     )
 
@@ -214,6 +270,14 @@ def to_dict(settings: Settings) -> dict[str, Any]:
             }
             for lottery in settings.lotteries
         ],
+        "player": [
+            {
+                "name": player.name,
+                "max_monthly_budget": float(player.max_monthly_budget),
+                "weight": dict(player.weights),
+            }
+            for player in settings.players
+        ],
     }
 
 
@@ -238,4 +302,23 @@ def with_lottery(settings: Settings, lottery: Lottery) -> Settings:
     return replace(
         settings,
         lotteries=tuple(lottery if lot is existing else lot for lot in settings.lotteries),
+    )
+
+
+def with_player(settings: Settings, player: Player) -> Settings:
+    """Return a copy of ``settings`` with ``player`` added or replaced by name."""
+    existing = settings.find_player(player.name)
+    if existing is None:
+        return replace(settings, players=(*settings.players, player))
+    return replace(
+        settings,
+        players=tuple(player if p is existing else p for p in settings.players),
+    )
+
+
+def without_player(settings: Settings, name: str) -> Settings:
+    """Return a copy of ``settings`` with the named player removed."""
+    return replace(
+        settings,
+        players=tuple(p for p in settings.players if p.name.casefold() != name.casefold()),
     )

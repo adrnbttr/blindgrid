@@ -209,3 +209,126 @@ def test_config_show_reports_the_saved_plan(workspace: Path) -> None:
 
     runner.invoke(app, ["generate", "-b", "30", "-l", "Loto", "-m", "2026-09"])
     assert "September 2026" in runner.invoke(app, ["config", "show"]).output
+
+
+# ------------------------------------------------------------------ household
+
+HOUSEHOLD = """
+[[player]]
+name = "Adrien"
+max_monthly_budget = 40.00
+  [player.weight]
+  EuroMillions = 1.0
+  Loto = 1.0
+  EuroDreams = 0.4
+
+[[player]]
+name = "Marie"
+max_monthly_budget = 25.00
+  [player.weight]
+  Loto = 1.0
+  EuroDreams = 1.0
+"""
+
+
+@pytest.fixture
+def household(workspace: Path) -> Path:
+    """A workspace whose config declares two players."""
+    target = workspace / "config.toml"
+    target.write_text(target.read_text(encoding="utf-8") + HOUSEHOLD, encoding="utf-8")
+    return workspace
+
+
+def test_a_household_plan_names_everyone(household: Path) -> None:
+    result = runner.invoke(app, ["generate", "-b", "Adrien=40", "-b", "Marie=25", "-m", "2026-09"])
+
+    assert result.exit_code == 0, result.output
+    assert "Player" in result.output
+    assert "Per player" in result.output
+    assert "Household totals" in result.output
+    for name in ("Adrien", "Marie"):
+        assert name in result.output
+
+
+def test_each_player_is_held_to_their_own_ceiling(household: Path) -> None:
+    result = runner.invoke(app, ["generate", "-b", "Adrien=40", "-b", "Marie=30", "-m", "2026-09"])
+
+    assert result.exit_code == 1
+    assert "Marie" in result.output
+    assert "exceeds the configured ceiling of 25.00" in result.output
+
+
+def test_a_bare_budget_is_refused_when_players_exist(household: Path) -> None:
+    result = runner.invoke(app, ["generate", "-b", "40", "-m", "2026-09"])
+
+    assert result.exit_code == 1
+    assert "NAME=AMOUNT" in result.output
+
+
+def test_an_unknown_player_is_reported(household: Path) -> None:
+    result = runner.invoke(app, ["generate", "-b", "Bob=10", "-m", "2026-09"])
+
+    assert result.exit_code == 1
+    assert "Unknown player" in result.output
+    assert "Adrien" in result.output
+
+
+def test_a_single_player_can_be_selected(household: Path) -> None:
+    result = runner.invoke(app, ["generate", "-p", "Marie", "-b", "Marie=25", "-m", "2026-09"])
+
+    assert result.exit_code == 0
+    assert "Marie" in result.output
+    # Marie does not play EuroMillions, and Adrien is not in this plan at all.
+    assert "EuroMillions" not in result.output
+
+
+def test_lottery_option_is_refused_in_household_mode(household: Path) -> None:
+    result = runner.invoke(app, ["generate", "-b", "Adrien=40", "-l", "Loto", "-m", "2026-09"])
+
+    assert result.exit_code == 1
+    assert "--lottery applies to solo mode" in result.output
+
+
+def test_player_option_is_refused_in_solo_mode(workspace: Path) -> None:
+    result = runner.invoke(app, ["generate", "-b", "40", "-p", "Adrien", "-m", "2026-09"])
+
+    assert result.exit_code == 1
+    assert "player add" in result.output
+
+
+def test_a_household_plan_is_also_drawn_once(household: Path) -> None:
+    first = runner.invoke(app, ["generate", "-b", "Adrien=40", "-b", "Marie=25", "-m", "2026-09"])
+    second = runner.invoke(app, ["generate", "-b", "Adrien=40", "-b", "Marie=25", "-m", "2026-09"])
+
+    assert "Plan already drawn on" in second.output
+    assert numbers_in(first.output) == numbers_in(second.output)
+
+
+def test_player_list_shows_preferences(household: Path) -> None:
+    result = runner.invoke(app, ["player", "list"])
+
+    assert result.exit_code == 0
+    assert "Adrien" in result.output
+    assert "EuroDreams (0.4)" in result.output
+    assert "Marie" in result.output
+
+
+def test_player_list_is_helpful_when_empty(workspace: Path) -> None:
+    result = runner.invoke(app, ["player", "list"])
+
+    assert result.exit_code == 0
+    assert "player add" in result.output
+
+
+def test_player_remove_deletes_only_that_person(household: Path) -> None:
+    assert runner.invoke(app, ["player", "remove", "Marie"]).exit_code == 0
+
+    settings = config.load(household / "config.toml")
+    assert [p.name for p in settings.players] == ["Adrien"]
+
+
+def test_player_remove_rejects_an_unknown_name(household: Path) -> None:
+    result = runner.invoke(app, ["player", "remove", "Bob"])
+
+    assert result.exit_code == 1
+    assert "Unknown player" in result.output

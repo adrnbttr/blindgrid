@@ -8,6 +8,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Households.** Declare people with `blindgrid player add`, or `[[player]]`
+  blocks in the config, and `generate` plans for everyone in one pass. Each
+  person keeps their own ceiling and their own lotteries, with their own
+  weights; nobody's budget affects anyone else's share, and there is
+  deliberately no household cap.
+- Draws are spread across dates so the same lottery is not played twice on the
+  same day while free dates remain. This does **not** improve anyone's odds —
+  two grids are two independent chances either way — and the documentation
+  says so plainly. When dates run short they are shared rather than grids
+  dropped, and the output reports it.
+- `player add`, `player list` and `player remove`.
+- **Windows support.** `install.ps1` mirrors the Unix installer, and
+  configuration and state follow `%APPDATA%` / `%LOCALAPPDATA%` on Windows
+  while keeping XDG elsewhere. CI now runs the test suite on Linux, macOS and
+  Windows, and exercises both installers end to end on each.
+- Past draws are struck through when a plan is shown again, so what is left to
+  play stands out.
+
 - A month is now drawn once. `generate` saves the plan to
   `~/.local/state/blindgrid/plan.json` and shows it again on later runs, so it
   can be found while the grids are being filled in. `--force` draws a new one
