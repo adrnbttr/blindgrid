@@ -75,24 +75,33 @@ different kind of predictable.
 
 ## Install
 
-Requires Python 3.11 or later.
+```bash
+curl -fsSL https://raw.githubusercontent.com/adrnbttr/blindgrid/main/install.sh | bash
+```
+
+That installs into your home directory, writes a starter config to
+`~/.config/blindgrid/`, and tells you what to add to your `PATH` if anything is
+missing. It never uses `sudo` and never writes outside `$HOME`. Prefer to read
+it before running it? `curl -fsSLO <the same url> && less install.sh` — it is
+short, and shellcheck runs against it in CI.
+
+If you already have a favourite tool, skip the script:
 
 ```bash
+uv tool install git+https://github.com/adrnbttr/blindgrid.git
 pipx install git+https://github.com/adrnbttr/blindgrid.git
 ```
 
-Or from a clone, for development:
+Python 3.11 or newer is required, except with uv, which brings its own.
+Removal is `bash install.sh --uninstall`, and your config survives it.
 
-```bash
-git clone https://github.com/adrnbttr/blindgrid.git
-cd blindgrid
-uv venv && uv pip install -e ".[dev]"
-```
+**[Full installation guide](docs/installation.md)** — other install methods,
+requirements, troubleshooting, updating, uninstalling.
 
 ## Use
 
 ```bash
-blindgrid config init      # create config.toml from the shipped example
+blindgrid config show      # where your config lives and what is in it
 blindgrid generate         # plan the current month
 ```
 

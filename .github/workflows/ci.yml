@@ -42,3 +42,30 @@ jobs:
 
       - name: Test
         run: pytest --cov --cov-report=term-missing
+
+  installer:
+    name: Installer
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Lint the script
+        run: shellcheck install.sh
+
+      # The installer is the first thing most people run, and its fallback path
+      # touches PATH, virtualenvs and the config directory. Exercise it for
+      # real rather than trusting that it still works.
+      - name: Install from this checkout
+        run: bash install.sh --method venv --source .
+
+      - name: The installed command runs
+        run: |
+          "$HOME/.local/bin/blindgrid" version
+          "$HOME/.local/bin/blindgrid" generate -b 20 -l Loto -m 2026-09 --no-export
+
+      - name: Uninstall cleanly
+        run: |
+          bash install.sh --uninstall
+          test ! -e "$HOME/.local/bin/blindgrid"
+          test -f "$HOME/.config/blindgrid/config.toml"  # config is kept on purpose

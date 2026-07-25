@@ -40,10 +40,13 @@ uv pip install -e ".[dev]"
 ruff check .
 ruff format .
 pytest
+shellcheck install.sh   # only if you touched the installer
 ```
 
-CI runs the same three commands on Python 3.11, 3.12 and 3.13, and a pull
-request needs them green.
+CI runs the same commands on Python 3.11, 3.12 and 3.13, and a pull request
+needs them green. It also installs the project with `install.sh` on a clean
+runner and uninstalls it again, so a change there is exercised for real rather
+than merely linted.
 
 ## Conventions
 
