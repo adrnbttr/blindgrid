@@ -1,13 +1,31 @@
-# blindgrid
+<div align="center">
 
-[![CI](https://github.com/adrnbttr/blindgrid/actions/workflows/ci.yml/badge.svg)](https://github.com/adrnbttr/blindgrid/actions/workflows/ci.yml)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+<img src="docs/logo.svg" alt="" width="88" height="88">
 
-Generate lottery grids from cryptographic randomness, and plan a month of draws
-inside a budget you cannot exceed.
+<h1>blindgrid</h1>
 
-![blindgrid generating a monthly plan](docs/demo.gif)
+<p>
+  <b>Lottery grids from cryptographic randomness,<br>
+  inside a budget you cannot exceed.</b>
+</p>
+
+<p>
+  <a href="https://github.com/adrnbttr/blindgrid/actions/workflows/ci.yml"><img src="https://github.com/adrnbttr/blindgrid/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/predictions-none-lightgrey" alt="Predictions: none">
+</p>
+
+<p>
+  <a href="#install">Install</a> ·
+  <a href="#what-this-is-not">What it refuses to do</a> ·
+  <a href="#adding-a-lottery-from-any-country">Add your own lottery</a> ·
+  <a href="#responsible-gambling">Responsible gambling</a>
+</p>
+
+<img src="docs/demo.gif" alt="blindgrid prompting for a budget, then printing a month of draws" width="880">
+
+</div>
 
 ## What this is
 
