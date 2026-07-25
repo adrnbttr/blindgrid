@@ -124,6 +124,10 @@ MESSAGES: dict[str, str] = {
         "Des poids égaux répartissent à parts égales ; 0.5 signifie deux fois moins qu'un 1.0."
     ),
     "lottery.saved": "{label} enregistrée dans {path}",
+    "error.config.missing": (
+        "Aucune configuration trouvée à {path}.\n"
+        "Lancez « blindgrid config init » pour en créer une."
+    ),
     "error.prefix": "Erreur : ",
     "error.cancelled": "Annulé.",
     "error.budget.invalid": "{who}{value} n'est pas un montant valide",

@@ -26,6 +26,7 @@ import tomli_w
 from blindgrid import i18n, paths
 from blindgrid.errors import ConfigError
 from blindgrid.filters import DEFAULT_ENABLED, RULE_NAMES
+from blindgrid.i18n import t
 from blindgrid.models import WEEKDAY_NAMES, Lottery, Player, Pool, money
 
 CONFIG_FILENAME = "config.toml"
@@ -252,10 +253,7 @@ def load(path: Path | None = None) -> Settings:
     """Read and validate the configuration file."""
     target = path or default_path()
     if not target.exists():
-        raise ConfigError(
-            f"No configuration found at {target}.\n"
-            f"Copy {EXAMPLE_FILENAME} to {CONFIG_FILENAME}, or run 'blindgrid config init'."
-        )
+        raise ConfigError(t("error.config.missing", path=target))
     try:
         with target.open("rb") as handle:
             data = tomllib.load(handle)

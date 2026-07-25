@@ -121,6 +121,10 @@ MESSAGES: dict[str, str] = {
         "Pesos iguales lo reparten por igual; 0.5 significa la mitad que un 1.0."
     ),
     "lottery.saved": "{label} guardada en {path}",
+    "error.config.missing": (
+        "No se encontró ninguna configuración en {path}.\n"
+        "Ejecuta «blindgrid config init» para crear una."
+    ),
     "error.prefix": "Error: ",
     "error.cancelled": "Cancelado.",
     "error.budget.invalid": "{who}{value} no es un importe válido",

@@ -122,6 +122,9 @@ MESSAGES: dict[str, str] = {
     "player.weight.example": "Equal weights split it evenly; 0.5 means half as much as a 1.0.",
     "lottery.saved": "Saved {label} to {path}",
     # Errors
+    "error.config.missing": (
+        "No configuration found at {path}.\nRun 'blindgrid config init' to create one."
+    ),
     "error.prefix": "Error: ",
     "error.cancelled": "Cancelled.",
     "error.budget.invalid": "{who}{value} is not a valid amount",

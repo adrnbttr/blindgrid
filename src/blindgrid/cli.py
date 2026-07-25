@@ -8,6 +8,7 @@ rest lives in the config file.
 
 from __future__ import annotations
 
+import re
 from dataclasses import replace
 from datetime import date
 from decimal import Decimal, InvalidOperation
@@ -52,6 +53,21 @@ app.add_typer(config_app, name="config", invoke_without_command=True)
 app.add_typer(lottery_app, name="lottery")
 app.add_typer(player_app, name="player")
 
+
+_requested_language: str | None = None
+
+
+@app.callback()
+def main(lang: LangOption = None) -> None:
+    """Accept --lang before the command as well as after it."""
+    global _requested_language  # noqa: PLW0603 - one setting for the whole run
+    # Assigned unconditionally: the process normally runs one command, but the
+    # test runner reuses it, and a stale value would leak into the next call.
+    _requested_language = lang
+    if lang:
+        _apply_language(lang)
+
+
 ConfigOption = Annotated[
     Path | None,
     typer.Option("--config", "-c", help=t("option.config"), show_default=False),
@@ -64,6 +80,7 @@ LangOption = Annotated[
 
 def _apply_language(explicit: str | None, settings: config.Settings | None = None) -> None:
     """Settle the language for this run, once the options and config are known."""
+    explicit = explicit or _requested_language
     if explicit and i18n.normalise(explicit) is None:
         _fatal(t("error.language", value=repr(explicit), known=", ".join(i18n.available())))
     i18n.activate(i18n.resolve(explicit, settings.language if settings else None))
@@ -112,6 +129,18 @@ def _resolve_month(spec: str | None) -> tuple[int, int]:
     return year, month
 
 
+# Typing "30 €" or "30 EUR" is the natural reflex, and the currency is already
+# known from the configuration. Thin spaces come from keyboards and from paste.
+ISO_CODE = re.compile(r"(?<=[\d\s])[A-Za-z]{3}$")
+CURRENCY_NOISE = re.compile(r"[€$£¥\s\u00a0\u202f]")
+
+
+def _clean_amount(raw: str) -> str:
+    """Strip currency decoration so a typed amount parses as a number."""
+    without_code = ISO_CODE.sub("", raw.strip())
+    return CURRENCY_NOISE.sub("", without_code).replace(",", ".")
+
+
 def _parse_budget(raw: str, ceiling: Decimal, who: str | None = None) -> Decimal:
     """Validate a budget against the configured hard ceiling.
 
@@ -121,7 +150,7 @@ def _parse_budget(raw: str, ceiling: Decimal, who: str | None = None) -> Decimal
     """
     owner = f"{who}: " if who else ""
     try:
-        amount = money(raw.strip().replace(",", "."))
+        amount = money(_clean_amount(raw))
     except (InvalidOperation, ValueError) as exc:
         raise BudgetError(t("error.budget.invalid", who=owner, value=repr(raw))) from exc
     if amount <= 0:
@@ -257,7 +286,7 @@ def _finish(plan: Plan, settings: config.Settings, export: bool) -> None:
         console.print()
 
 
-@app.command()
+@app.command(help=t("generate.help"))
 def generate(
     config_path: ConfigOption = None,
     lang: LangOption = None,
@@ -481,7 +510,7 @@ def edit(config_path: ConfigOption = None, lang: LangOption = None) -> None:
     )
 
     try:
-        amount = money(ceiling.strip().replace(",", "."))
+        amount = money(_clean_amount(ceiling))
     except (InvalidOperation, ValueError):
         _fatal(t("error.budget.invalid", who="", value=repr(ceiling)))
 
@@ -562,7 +591,7 @@ def lottery_add(config_path: ConfigOption = None, lang: LangOption = None) -> No
         lottery = Lottery(
             label=label,
             currency=currency,
-            price_per_grid=money(price.strip().replace(",", ".")),
+            price_per_grid=money(_clean_amount(price)),
             draw_days=frozenset(WEEKDAY_NAMES.index(day) for day in days),  # type: ignore[union-attr]
             weight=float(weight),
             pools=pools,
@@ -650,7 +679,7 @@ def player_add(config_path: ConfigOption = None, lang: LangOption = None) -> Non
     try:
         player = Player(
             name=name,
-            max_monthly_budget=money(ceiling.strip().replace(",", ".")),
+            max_monthly_budget=money(_clean_amount(ceiling)),
             weights=weights,
         )
     except (InvalidOperation, TypeError, ValueError) as exc:
@@ -713,7 +742,7 @@ def player_remove(
     console.print(Text(t("player.removed", name=name, path=written), style="green"))
 
 
-@app.command()
+@app.command(help=t("version.help"))
 def version() -> None:
     """Print the installed version."""
     console.print(f"blindgrid {__version__}")

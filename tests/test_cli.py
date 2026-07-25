@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from blindgrid import config, store
+from blindgrid import config, i18n, store
 from blindgrid.cli import app
 
 runner = CliRunner()
@@ -332,3 +332,92 @@ def test_player_remove_rejects_an_unknown_name(household: Path) -> None:
 
     assert result.exit_code == 1
     assert "Unknown player" in result.output
+
+
+# ------------------------------------------------------- typing an amount naturally
+
+
+@pytest.mark.parametrize(
+    "budget",
+    # The seventh entry holds a non-breaking space, which is what French
+    # keyboards and pasted amounts actually produce.
+    ["30", "30.00", "30,00", "30 €", "30€", "€30", "30 EUR", "30 €", " 30 "],  # noqa: RUF001
+)
+def test_an_amount_is_accepted_however_it_is_typed(budget: str, workspace: Path) -> None:
+    """The currency is already known from the config; typing it is a reflex."""
+    result = runner.invoke(app, ["generate", "-b", budget, "-l", "Loto", "-m", "2026-09"])
+    assert result.exit_code == 0, result.output
+    assert "30.00 EUR" in result.output
+
+
+@pytest.mark.parametrize("budget", ["abc", "EUR", "€", "", "1.2.3", "--"])
+def test_nonsense_is_still_refused(budget: str, workspace: Path) -> None:
+    result = runner.invoke(app, ["generate", "-b", budget, "-l", "Loto", "-m", "2026-09"])
+    assert result.exit_code == 1
+
+
+# ------------------------------------------------------------------------ language
+
+
+def test_the_language_can_be_chosen_per_run(workspace: Path) -> None:
+    result = runner.invoke(
+        app, ["generate", "--lang", "fr", "-b", "30", "-l", "Loto", "-m", "2026-09"]
+    )
+
+    assert result.exit_code == 0
+    assert "Tirages à jouer" in result.output
+    assert "Draws to play" not in result.output
+
+
+def test_the_language_option_works_before_the_command(workspace: Path) -> None:
+    """People write `blindgrid --lang fr generate`, not only the other way round."""
+    result = runner.invoke(
+        app, ["--lang", "de", "generate", "-b", "30", "-l", "Loto", "-m", "2026-09"]
+    )
+
+    assert result.exit_code == 0
+    assert "Zu spielende Ziehungen" in result.output
+
+
+def test_an_unknown_language_is_refused_with_the_list(workspace: Path) -> None:
+    result = runner.invoke(
+        app, ["generate", "--lang", "klingon", "-b", "30", "-l", "Loto", "-m", "2026-09"]
+    )
+
+    assert result.exit_code == 1
+    assert "klingon" in result.output
+    assert "fr" in result.output and "es" in result.output
+
+
+def test_the_configured_language_is_used(workspace: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # The environment variable outranks the config file, so it has to go.
+    monkeypatch.delenv(i18n.ENV_VAR, raising=False)
+    target = workspace / "config.toml"
+    target.write_text('language = "es"\n' + target.read_text(encoding="utf-8"), encoding="utf-8")
+
+    result = runner.invoke(app, ["generate", "-b", "30", "-l", "Loto", "-m", "2026-09"])
+    assert "Sorteos a jugar" in result.output
+
+
+def test_the_option_overrides_the_configured_language(workspace: Path) -> None:
+    target = workspace / "config.toml"
+    target.write_text('language = "es"\n' + target.read_text(encoding="utf-8"), encoding="utf-8")
+
+    result = runner.invoke(
+        app, ["generate", "--lang", "de", "-b", "30", "-l", "Loto", "-m", "2026-09"]
+    )
+    assert "Zu spielende Ziehungen" in result.output
+
+
+def test_an_unknown_configured_language_is_reported(
+    workspace: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(i18n.ENV_VAR, raising=False)
+    target = workspace / "config.toml"
+    target.write_text(
+        'language = "klingon"\n' + target.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    result = runner.invoke(app, ["config", "show"])
+    assert result.exit_code == 1
+    assert "not available" in result.output
