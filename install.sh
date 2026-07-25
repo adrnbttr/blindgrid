@@ -30,6 +30,7 @@ PREFIX="${BLINDGRID_PREFIX:-$HOME/.local}"
 VENV_DIR="$PREFIX/share/blindgrid/venv"
 BIN_DIR="$PREFIX/bin"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/blindgrid"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/blindgrid"
 
 METHOD="auto"
 SOURCE=""
@@ -126,10 +127,12 @@ uninstall() {
 
   [ "$removed" -eq 1 ] || warn "nothing to remove"
 
-  if [ -d "$CONFIG_DIR" ]; then
+  if [ -d "$CONFIG_DIR" ] || [ -d "$STATE_DIR" ]; then
     printf '\n'
-    info "Your configuration is untouched at $CONFIG_DIR"
-    info "Delete it yourself if you want it gone."
+    info "Your own files are untouched:"
+    [ -d "$CONFIG_DIR" ] && info "  $CONFIG_DIR    (your budget ceiling and lotteries)"
+    [ -d "$STATE_DIR" ]  && info "  $STATE_DIR    (the plan for the current month)"
+    info "Delete them yourself if you want them gone."
   fi
   printf '\n'
   exit 0

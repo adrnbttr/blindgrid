@@ -8,6 +8,7 @@ rest lives in the config file.
 
 from __future__ import annotations
 
+import calendar
 from dataclasses import replace
 from datetime import date
 from decimal import Decimal, InvalidOperation
@@ -21,12 +22,12 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
-from blindgrid import __version__, config
-from blindgrid.errors import BlindgridError, BudgetError, ConfigError
+from blindgrid import __version__, config, store
+from blindgrid.errors import BlindgridError, BudgetError, ConfigError, StoreError
 from blindgrid.export import export_plan
 from blindgrid.filters import RULES
 from blindgrid.generator import system_rng
-from blindgrid.models import WEEKDAY_NAMES, Lottery, Pool, money
+from blindgrid.models import WEEKDAY_NAMES, Lottery, Plan, Pool, money
 from blindgrid.plan import build_plan
 from blindgrid.render import render_plan
 
@@ -158,6 +159,15 @@ def _select_lotteries(
     return tuple(lot for lot in available if lot.label in set(picked))
 
 
+def _finish(plan: Plan, settings: config.Settings, export: bool) -> None:
+    """Render a plan and, unless asked not to, refresh the Markdown export."""
+    render_plan(plan, console)
+    if export:
+        written = export_plan(plan, settings.export_path)
+        console.print(Text(f"Exported to {written}", style="dim"))
+        console.print()
+
+
 @app.command()
 def generate(
     config_path: ConfigOption = None,
@@ -173,15 +183,53 @@ def generate(
         str | None,
         typer.Option("--month", "-m", help="Month to plan, as YYYY-MM. Defaults to now."),
     ] = None,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Draw a new plan even if this month already has one."),
+    ] = False,
     export: Annotated[
         bool, typer.Option("--export/--no-export", help="Write the Markdown export.")
     ] = True,
 ) -> None:
-    """Build this month's plan: how much to spend, which draws, which numbers."""
+    """Build this month's plan: how much to spend, which draws, which numbers.
+
+    A month is drawn once. Running this again shows the plan you already have,
+    so you can come back to it while you fill your grids.
+    """
     settings = _load(config_path)
     year, month_number = _resolve_month(month)
 
+    try:
+        existing = store.load_for(year, month_number)
+    except StoreError as exc:
+        # A corrupt file must not block the month. Say so and draw a new plan.
+        existing = None
+        err_console.print(Text(f"Ignoring the saved plan: {exc}", style="yellow"))
+
+    if existing is not None and not force:
+        console.print()
+        console.print(
+            Text("Plan already drawn on ", style="dim")
+            + Text(existing.drawn_on.date().isoformat(), style="bold")
+            + Text(". Showing it again — pass --force to draw a new one.", style="dim")
+        )
+        _finish(existing.plan, settings, export)
+        return
+
     console.print()
+    if existing is not None:
+        console.print(
+            Text("Replacing the plan drawn on ", style="yellow")
+            + Text(existing.drawn_on.date().isoformat(), style="bold yellow")
+        )
+        console.print(
+            Text(
+                "Redrawing until the numbers look right is the bias this tool removes.",
+                style="dim",
+            )
+        )
+        console.print()
+
     console.print(
         Text("Monthly ceiling: ", style="dim")
         + Text(f"{settings.max_monthly_budget}", style="bold")
@@ -206,12 +254,16 @@ def generate(
     except BlindgridError as exc:
         _fatal(exc)
 
-    render_plan(plan, console)
+    try:
+        store.save(plan)
+    except OSError as exc:
+        # The plan is already drawn and valid; failing to file it away is worth
+        # a warning, not throwing the month's numbers away.
+        err_console.print(
+            Text(f"Could not save this plan, it will not be remembered: {exc}", style="yellow")
+        )
 
-    if export:
-        written = export_plan(plan, settings.export_path)
-        console.print(Text(f"Exported to {written}", style="dim"))
-        console.print()
+    _finish(plan, settings, export)
 
 
 @config_app.callback()
@@ -253,6 +305,21 @@ def config_show(config_path: ConfigOption = None) -> None:
     table.add_row("File", str(settings.path))
     table.add_row("Monthly ceiling", str(settings.max_monthly_budget))
     table.add_row("Export path", str(settings.export_path))
+
+    plan_path = store.default_path()
+    try:
+        current = store.load(plan_path)
+    except StoreError:
+        current = None
+        state = "unreadable"
+    else:
+        state = (
+            f"{calendar.month_name[current.plan.month]} {current.plan.year}, "
+            f"drawn {current.drawn_on.date().isoformat()}"
+            if current
+            else "none drawn yet"
+        )
+    table.add_row("Current plan", f"{plan_path}\n{state}")
     table.add_row(
         "Filters",
         ", ".join(sorted(settings.enabled_filters)) or "none",

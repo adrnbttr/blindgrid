@@ -54,7 +54,7 @@ will be declined:
 | --- | --- |
 | Historical draw data, frequency statistics, hot/cold numbers | Past draws say nothing about future ones. Displaying them implies otherwise. |
 | A `--seed` flag or any deterministic mode | Reproducible numbers reintroduce exactly the structure this tool removes. |
-| Stored history of generated grids | Keeping grids invites comparing them to results, and comparing invites pattern-hunting. |
+| A history of past months | Months of stored grids invite comparing them against results, and comparing invites pattern-hunting. The current month is kept so you can find it again — one file, replaced, never accumulated. |
 | Any attempt to spend the budget exactly | Unspent money is a good outcome. A tool that consumed the envelope would encourage spending. |
 
 What is left, then? Two honest things: **randomness without human bias**, and a
@@ -106,7 +106,29 @@ blindgrid generate         # plan the current month
 ```
 
 `generate` asks for two things — the budget for this month, and which lotteries
-to include — then prints the plan and writes `plan.md`.
+to include — then prints the plan and writes `plan.md`. It plans the current
+month by default; `--month` is only there for planning ahead.
+
+### A month is drawn once
+
+Run `generate` again and you get the same plan back, not a new one:
+
+```
+$ blindgrid generate
+Plan already drawn on 2026-09-01. Showing it again — pass --force to draw a new one.
+```
+
+This is partly convenience — you can come back to it while you fill your grids
+— but mostly it is the point. A tool that redrew on every run would let you
+reroll until the numbers looked right, and picking the draw you like best is
+exactly the bias the filters exist to remove.
+
+`--force` is there for the genuine mistake, a mistyped budget or the wrong
+lotteries. It says what it is replacing before it does it.
+
+The plan lives in `~/.local/state/blindgrid/plan.json`, one file, replaced when
+the month turns. It is a self-contained snapshot, so editing your config
+afterwards never changes a plan you already hold.
 
 ```
 Usage: blindgrid [OPTIONS] COMMAND [ARGS]...
@@ -124,6 +146,7 @@ Useful options on `generate`:
 | `-b, --budget 30` | Skip the prompt and use this amount. |
 | `-l, --lottery Loto` | Include a specific lottery. Repeatable. |
 | `-m, --month 2026-09` | Plan a month other than the current one. |
+| `--force` | Draw a new plan even though this month already has one. |
 | `--no-export` | Print the plan without writing `plan.md`. |
 
 ## Configuration

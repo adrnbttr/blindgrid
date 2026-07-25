@@ -21,3 +21,7 @@ class BudgetError(BlindgridError):
 
 class GridGenerationError(BlindgridError):
     """No grid satisfying the active filters was found within the attempt cap."""
+
+
+class StoreError(BlindgridError):
+    """The saved plan exists but cannot be read back."""

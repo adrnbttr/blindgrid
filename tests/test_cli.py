@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from blindgrid import config
+from blindgrid import config, store
 from blindgrid.cli import app
 
 runner = CliRunner()
@@ -26,11 +26,21 @@ def wide_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def workspace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A directory holding a valid config, with the CWD pointed at it."""
+    """A directory holding a valid config, with the CWD pointed at it.
+
+    The saved plan is redirected here too, so tests never read or overwrite the
+    plan of whoever is running them.
+    """
     target = tmp_path / "config.toml"
     target.write_text(config.example_toml(), encoding="utf-8")
+    monkeypatch.setenv(store.ENV_VAR, str(tmp_path / "state" / "plan.json"))
     monkeypatch.chdir(tmp_path)
     return tmp_path
+
+
+def numbers_in(output: str) -> list[str]:
+    """The drawn numbers, as they appear in the rendered table rows."""
+    return [line.split("│")[4].strip() for line in output.splitlines() if line.count("│") > 4]
 
 
 def test_generate_prints_a_plan_and_writes_the_export(workspace: Path) -> None:
@@ -130,3 +140,72 @@ def test_version_is_printed() -> None:
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
     assert "blindgrid" in result.output
+
+
+# --------------------------------------------------------------- a month is drawn once
+
+
+def test_running_twice_shows_the_same_numbers(workspace: Path) -> None:
+    first = runner.invoke(app, ["generate", "-b", "30", "-l", "Loto", "-m", "2026-09"])
+    second = runner.invoke(app, ["generate", "-b", "30", "-l", "Loto", "-m", "2026-09"])
+
+    assert second.exit_code == 0
+    assert "Plan already drawn on" in second.output
+    assert numbers_in(first.output) == numbers_in(second.output)
+
+
+def test_the_second_run_ignores_a_different_budget(workspace: Path) -> None:
+    """The month is settled. Changing the arguments must not reroll it."""
+    first = runner.invoke(app, ["generate", "-b", "10", "-l", "Loto", "-m", "2026-09"])
+    second = runner.invoke(app, ["generate", "-b", "40", "-l", "EuroMillions", "-m", "2026-09"])
+
+    assert numbers_in(first.output) == numbers_in(second.output)
+    assert "10.00 EUR" in second.output
+
+
+def test_force_draws_a_new_plan_and_says_so(workspace: Path) -> None:
+    first = runner.invoke(app, ["generate", "-b", "30", "-l", "Loto", "-m", "2026-09"])
+    forced = runner.invoke(app, ["generate", "-b", "30", "-l", "Loto", "-m", "2026-09", "--force"])
+
+    assert forced.exit_code == 0
+    assert "Replacing the plan drawn on" in forced.output
+    assert "bias this tool removes" in forced.output
+    assert numbers_in(first.output) != numbers_in(forced.output)
+
+
+def test_a_different_month_is_drawn_fresh(workspace: Path) -> None:
+    runner.invoke(app, ["generate", "-b", "30", "-l", "Loto", "-m", "2026-09"])
+    october = runner.invoke(app, ["generate", "-b", "30", "-l", "Loto", "-m", "2026-10"])
+
+    assert "Plan already drawn" not in october.output
+    assert "October 2026" in october.output
+
+    # The new month replaced the old one: no history piles up.
+    assert store.load().plan.month == 10
+
+
+def test_the_export_is_rewritten_when_a_plan_is_shown_again(workspace: Path) -> None:
+    runner.invoke(app, ["generate", "-b", "30", "-l", "Loto", "-m", "2026-09"])
+    (workspace / "plan.md").unlink()
+
+    runner.invoke(app, ["generate", "-b", "30", "-l", "Loto", "-m", "2026-09"])
+    assert (workspace / "plan.md").exists()
+
+
+def test_a_corrupt_saved_plan_does_not_block_the_month(workspace: Path) -> None:
+    state = Path(store.default_path())
+    state.parent.mkdir(parents=True, exist_ok=True)
+    state.write_text("{ not json", encoding="utf-8")
+
+    result = runner.invoke(app, ["generate", "-b", "30", "-l", "Loto", "-m", "2026-09"])
+
+    assert result.exit_code == 0
+    assert "Ignoring the saved plan" in result.output
+    assert "Draws to play" in result.output
+
+
+def test_config_show_reports_the_saved_plan(workspace: Path) -> None:
+    assert "none drawn yet" in runner.invoke(app, ["config", "show"]).output
+
+    runner.invoke(app, ["generate", "-b", "30", "-l", "Loto", "-m", "2026-09"])
+    assert "September 2026" in runner.invoke(app, ["config", "show"]).output

@@ -100,6 +100,10 @@ blindgrid config show     # where is my config, what is in it
 blindgrid generate        # plan this month
 ```
 
+`generate` plans the current month, so there is nothing to pass on the first of
+the month. Run it again later and it shows you the same plan rather than
+drawing a new one — see [A month is drawn once](../README.md#a-month-is-drawn-once).
+
 **Open your config before you play.** The shipped example carries three French
 games with prices checked in July 2026, and a `max_monthly_budget` of 40. Both
 are illustrations, not recommendations:
@@ -177,8 +181,9 @@ curl -fsSL https://raw.githubusercontent.com/adrnbttr/blindgrid/main/install.sh 
 
 Or, from a clone, `bash install.sh --uninstall`.
 
-Your configuration is deliberately left behind. Remove it yourself:
+Your configuration is deliberately left behind. Remove it, and the current
+plan, yourself:
 
 ```bash
-rm -rf ~/.config/blindgrid
+rm -rf ~/.config/blindgrid ~/.local/state/blindgrid
 ```

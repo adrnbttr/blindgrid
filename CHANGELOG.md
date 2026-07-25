@@ -6,6 +6,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A month is now drawn once. `generate` saves the plan to
+  `~/.local/state/blindgrid/plan.json` and shows it again on later runs, so it
+  can be found while the grids are being filled in. `--force` draws a new one
+  and states what it replaces.
+- `config show` reports where the current plan lives and when it was drawn.
+
+### Changed
+
+- The stored plan is one file, replaced when the month turns, and a
+  self-contained snapshot: editing the configuration afterwards does not alter
+  a plan already drawn. This narrows the original "no persistence" rule to
+  what it was protecting against — an accumulated history of past grids, which
+  is still out of scope — while removing the ability to reroll a month until
+  the numbers look right.
+
 ## [0.1.0] - 2026-07-25
 
 First public release.

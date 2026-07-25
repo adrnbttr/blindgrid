@@ -14,8 +14,10 @@ The README explains the reasoning; this is the short version.
   product, not a missing capability.
 - **Seeding or reproducible output.** No `--seed`, no deterministic mode, no
   fixed generator in the package. A test enforces this.
-- **Persistent history of generated grids.** The Markdown export is
-  overwritten on every run, deliberately.
+- **A history of past months.** The current plan is kept in one file so it can
+  be found again, and replaced when the month turns. Accumulating months is a
+  different thing: it makes past grids comparable to results, which is where
+  pattern-hunting starts.
 - **Consuming the budget exactly.** Leftover money stays unspent.
 - **Hardcoding a country or a game.** Lotteries live in configuration. If
   something cannot be expressed as a price, a set of draw days and pools of
