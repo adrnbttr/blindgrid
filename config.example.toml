@@ -1,0 +1,81 @@
+# blindgrid example configuration.
+#
+# Copy this file to config.toml and edit it, or run `blindgrid config init`.
+# config.toml is gitignored: it holds your own budget ceiling.
+#
+# The three games below are French, and that is the only reason France appears
+# anywhere in this project. Nothing in the code knows about them. A lottery is
+# fully described by its price, its draw days and the shape of its pools, so
+# any game in any country is a matter of editing this file.
+#
+# Prices and draw days were checked against the operator's site in July 2026.
+# Verify them against your own operator before playing.
+
+# Hard ceiling. `blindgrid generate` refuses any monthly budget above this
+# value, with no override. Set it once, in a calm moment.
+max_monthly_budget = 40.00
+
+# Where the plan is exported. The file is overwritten on every run.
+export_path = "plan.md"
+
+# Anti-pattern filters. Each one only applies to pools large enough for it to
+# mean anything; a 1-from-10 bonus pool is always drawn unfiltered.
+# Turning rules off is safe. Turning many on is not: every active rule shrinks
+# the sample space, which is the opposite of what this tool is for.
+[filters]
+min_high_numbers = true   # at least 2 numbers above 31, away from birthdate bias
+max_consecutive = true    # no runs of 3 or more consecutive numbers
+central_sum = true        # sum inside a central range for the pool size
+mixed_parity = true       # not all odd, not all even
+spread_decades = true     # not every number inside a single decade
+
+[[lottery]]
+label = "EuroMillions"
+currency = "EUR"
+price_per_grid = 2.50
+draw_days = ["tuesday", "friday"]
+weight = 1.0
+
+  [[lottery.pool]]
+  name = "numbers"
+  count = 5
+  max = 50
+
+  [[lottery.pool]]
+  name = "stars"
+  count = 2
+  max = 12
+
+[[lottery]]
+label = "Loto"
+currency = "EUR"
+price_per_grid = 2.20
+draw_days = ["monday", "wednesday", "saturday"]
+weight = 1.0
+
+  [[lottery.pool]]
+  name = "numbers"
+  count = 5
+  max = 49
+
+  [[lottery.pool]]
+  name = "lucky"
+  count = 1
+  max = 10
+
+[[lottery]]
+label = "EuroDreams"
+currency = "EUR"
+price_per_grid = 2.50
+draw_days = ["monday", "thursday"]
+weight = 0.4
+
+  [[lottery.pool]]
+  name = "numbers"
+  count = 6
+  max = 40
+
+  [[lottery.pool]]
+  name = "dream"
+  count = 1
+  max = 5
