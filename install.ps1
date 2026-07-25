@@ -138,7 +138,7 @@ function Invoke-Uninstall {
     exit 0
 }
 
-if ($script:Uninstall) { Invoke-Uninstall }
+if ($Uninstall) { Invoke-Uninstall }
 
 # --------------------------------------------------------------- python lookup
 
@@ -252,8 +252,8 @@ function Show-PathAdvice([string] $Executable) {
     Write-Host ""
 }
 
-function Write-StarterConfig([string] $Executable) {
-    if ($script:NoConfig) { return }
+function Write-StarterConfig([string] $Executable, [bool] $Skip) {
+    if ($Skip) { return }
 
     Write-Step 'Configuration'
     $configFile = Join-Path $ConfigDir 'config.toml'
@@ -327,6 +327,6 @@ Write-Step 'Verifying'
 if ($LASTEXITCODE -ne 0) { Show-Failure 'The installed command does not run.' }
 Write-Ok 'blindgrid runs'
 
-Write-StarterConfig $executable
+Write-StarterConfig $executable $NoConfig
 Show-PathAdvice $executable
 Show-Farewell $executable
