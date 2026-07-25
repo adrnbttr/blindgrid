@@ -7,7 +7,7 @@
 Generate lottery grids from cryptographic randomness, and plan a month of draws
 inside a budget you cannot exceed.
 
-![blindgrid generating a monthly plan](docs/demo.svg)
+![blindgrid generating a monthly plan](docs/demo.gif)
 
 ## What this is
 

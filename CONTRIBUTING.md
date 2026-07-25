@@ -70,12 +70,15 @@ filtered draw is a predictable draw. If a rule is still worth it:
 
 ## Regenerating the README image
 
-`docs/demo.svg` is recorded from a real run, not drawn by hand:
+`docs/demo.gif` is recorded from a real run, not drawn by hand. It needs
+[vhs](https://github.com/charmbracelet/vhs):
 
 ```bash
-python docs/make_demo.py
+brew install vhs        # or see the vhs README for other platforms
+vhs docs/demo.tape      # from the repository root
 ```
 
-Run it after any change to `render.py`. If you have
-[vhs](https://github.com/charmbracelet/vhs) installed, `vhs docs/demo.tape`
-produces an animated GIF of the interactive flow instead.
+The tape points the tool at a throwaway config in a temporary directory, so
+recording never touches your own `config.toml`. Regenerate after any change to
+`render.py`, and expect different numbers every time — the demo draws from the
+real CSPRNG like everything else.
