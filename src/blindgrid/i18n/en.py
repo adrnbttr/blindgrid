@@ -188,6 +188,15 @@ MESSAGES: dict[str, str] = {
     "month.11": "November",
     "month.12": "December",
     # Weekdays, Monday first
+    # Abbreviations as each language actually writes them: German uses two
+    # letters, not a truncation of the full name.
+    "weekday.short.0": "Mon",
+    "weekday.short.1": "Tue",
+    "weekday.short.2": "Wed",
+    "weekday.short.3": "Thu",
+    "weekday.short.4": "Fri",
+    "weekday.short.5": "Sat",
+    "weekday.short.6": "Sun",
     "weekday.0": "Monday",
     "weekday.1": "Tuesday",
     "weekday.2": "Wednesday",

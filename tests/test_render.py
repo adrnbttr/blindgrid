@@ -13,6 +13,7 @@ from decimal import Decimal
 import pytest
 from rich.console import Console
 
+from blindgrid.export import to_markdown
 from blindgrid.models import Lottery, Plan, Player
 from blindgrid.plan import build_household_plan, build_plan
 from blindgrid.render import NumberLayout, format_numbers, format_weights, render_plan
@@ -167,11 +168,33 @@ def test_the_table_is_used_when_it_fits(plan: Plan) -> None:
     assert "┼" in output and "│" in output
 
 
-@pytest.mark.parametrize("width", [40, 50, 60, 70])
-def test_a_narrow_terminal_drops_the_table(width: int, plan: Plan) -> None:
-    """Squeezed into a phone or a tablet, the table shreds the numbers."""
+@pytest.mark.parametrize("width", [40, 50])
+def test_a_phone_drops_the_table(width: int, plan: Plan) -> None:
+    """Below what even the leanest table needs, it shreds the numbers."""
     output = render(plan, width=width)
     assert "┼" not in output, "a table survived at a width that cannot hold it"
+
+
+def test_the_table_sheds_columns_before_giving_up(household: Plan) -> None:
+    """Between the two extremes, a table missing a column beats a list.
+
+    The cost is fixed per lottery and totalled below; the weekday follows from
+    the date. Both go before the table itself does.
+    """
+    wide = render(household, width=120)
+    assert "Cost" in wide and "Day" in wide
+
+    middle = render(household, width=78)
+    assert "┼" in middle, "gave up on the table while one could still fit"
+    assert "Cost" not in middle
+
+    tighter = render(household, width=68)
+    assert "┼" in tighter
+    assert "Day" not in tighter
+
+    # What is left is the irreducible answer: what to play, and when.
+    for output in (middle, tighter):
+        assert "Numbers" in output and "Lottery" in output and "Date" in output
 
 
 @pytest.mark.parametrize("width", [40, 50, 60, 70])
@@ -227,3 +250,28 @@ def test_an_empty_plan_is_fine_when_narrow(
 ) -> None:
     empty = build_plan(budget=Decimal("1.00"), lotteries=lotteries, year=2026, month=9, rng=rng)
     assert "No draw could be planned" in render(empty, width=45)
+
+
+def test_the_table_survives_a_tablet_in_portrait(household: Plan) -> None:
+    """An iPad in portrait gives about 90 columns in a-Shell.
+
+    The table used to need 97 and fell back to the list there, which meant the
+    layout flipped when you rotated the device — the worst of both. Dropping
+    the redundant year and month from every row, and abbreviating the weekday,
+    brought it under. Keep it that way.
+    """
+    output = render(household, width=90)
+    assert "┼" in output, "the table no longer fits a tablet in portrait"
+
+
+def test_rows_carry_the_day_not_the_full_date(household: Plan) -> None:
+    """The month is in the title; repeating it on every row is noise."""
+    output = render(household, width=110)
+    assert "September 2026" in output
+    assert "2026-09-" not in output
+
+
+def test_the_export_keeps_full_dates(household: Plan) -> None:
+    """The Markdown file is read away from the terminal, so it stays explicit."""
+    document = to_markdown(household)
+    assert "2026-09-" in document

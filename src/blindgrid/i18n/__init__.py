@@ -116,3 +116,11 @@ def month_name(month: int) -> str:
 def weekday_name(weekday: int) -> str:
     """The weekday's name in the active language, Monday being 0."""
     return t(f"weekday.{weekday}")
+
+
+def weekday_short(weekday: int) -> str:
+    """The weekday abbreviated the way the language does it.
+
+    Not a truncation: German writes Mi, not Mit.
+    """
+    return t(f"weekday.short.{weekday}")

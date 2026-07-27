@@ -188,6 +188,15 @@ MESSAGES: dict[str, str] = {
     "month.10": "octubre",
     "month.11": "noviembre",
     "month.12": "diciembre",
+    # Abbreviations as each language actually writes them: German uses two
+    # letters, not a truncation of the full name.
+    "weekday.short.0": "lun",
+    "weekday.short.1": "mar",
+    "weekday.short.2": "mié",
+    "weekday.short.3": "jue",
+    "weekday.short.4": "vie",
+    "weekday.short.5": "sáb",
+    "weekday.short.6": "dom",
     "weekday.0": "lunes",
     "weekday.1": "martes",
     "weekday.2": "miércoles",

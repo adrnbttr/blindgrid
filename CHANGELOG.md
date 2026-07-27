@@ -6,6 +6,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The plan is laid out responsively rather than in two fixed modes. The table
+  now drops the redundant year and month from every row and abbreviates the
+  weekday, which brings it under 90 columns — what an iPad in portrait gives
+  you, so rotating the device no longer flips the layout. Below that it sheds
+  the cost column, then the weekday, and only then falls back to the list. The
+  date, the lottery and the numbers never go.
+- Weekday abbreviations follow each language rather than truncating the full
+  name: German writes *Mi*, not *Mit*.
+- The Markdown export keeps full dates and full weekday names — it is read
+  away from the terminal, with no title above it to supply the month.
+
+### Fixed
+
+- Every subcommand's help follows the chosen language. Typer takes a command's
+  docstring as its help text unless told otherwise, which had left the eight
+  subcommands and two options in English whatever the language. A test per
+  command now checks it.
+
 ## [0.2.0] - 2026-07-27
 
 ### Added

@@ -165,9 +165,17 @@ obvious.
 
 ## On a tablet or a phone
 
-The plan lays itself out to fit. Below roughly 80 columns — an iPad in
-portrait, a phone, a split view — the table is dropped for a list, and the
-numbers get a line to themselves:
+The plan lays itself out to fit, measured against the terminal rather than
+guessed at.
+
+The table is deliberately narrow: the month is in the title, so each row
+carries the day alone rather than repeating `2026-09-`, and the weekday is
+abbreviated the way each language does it. That keeps it under 90 columns even
+with two players, which is what an **iPad in portrait** gives you — so rotating
+the device no longer flips the layout.
+
+Squeeze it far enough — a phone, a split view — and the table would shred the
+numbers, so it becomes a list instead:
 
 ```
 September 2026
@@ -179,9 +187,26 @@ September 2026
      7 20 22 34 35  ·  lucky  2
 ```
 
+The table does not simply give up when it runs out of room — it sheds what it
+can spare first, in this order:
+
+| Width | What you get |
+| --- | --- |
+| Desktop, iPad landscape | Full table |
+| **iPad portrait** (~90 cols) | Full table |
+| ~70–85 cols | Table without the cost column — it is fixed per lottery and totalled below |
+| ~60–70 cols | …and without the weekday, which follows from the date |
+| Phone, split view (under ~60) | List, two lines per draw |
+
+What never goes is the answer to *what do I play, and when*: the date, the
+lottery, and the numbers. `--compact` and `--table` override the choice.
+
 The numbers are the one thing you copy onto a paper slip, so they are never
 wrapped and nothing is ever cut to `Eur…`. It stays readable down to about 40
 columns. `--compact` and `--table` force either layout.
+
+The Markdown export keeps full dates and full weekday names: it is read away
+from the terminal, where there is no title above it to give the context.
 
 ## Playing as a household
 
@@ -194,13 +219,13 @@ blindgrid generate       # asks each person for their budget, then plans
 ```
 
 ```
-╭────────────┬───────────┬────────┬──────────────┬──────────────────────────┬──────────╮
-│ Date       │ Day       │ Player │ Lottery      │ Numbers                  │     Cost │
-├────────────┼───────────┼────────┼──────────────┼──────────────────────────┼──────────┤
-│ 2026-09-11 │ Friday    │ Adrien │ EuroMillions │ 10 11 22 35 36 · stars…  │ 2.50 EUR │
-│ 2026-09-19 │ Saturday  │ Marie  │ Loto         │  4  5 10 38 42 · lucky 3 │ 2.20 EUR │
-│ 2026-09-21 │ Monday    │ Marie  │ EuroDreams   │  7  9 18 32 34 · dream 5 │ 2.50 EUR │
-╰────────────┴───────────┴────────┴──────────────┴──────────────────────────┴──────────╯
+╭──────┬─────┬────────┬──────────────┬────────────────────────────────┬──────────╮
+│ Date │ Day │ Player │ Lottery      │ Numbers                        │     Cost │
+├──────┼─────┼────────┼──────────────┼────────────────────────────────┼──────────┤
+│   11 │ Fri │ Adrien │ EuroMillions │ 10 11 22 35 36  ·  stars  8 12 │ 2.50 EUR │
+│   19 │ Sat │ Marie  │ Loto         │  4  5 10 38 42  ·  lucky  3    │ 2.20 EUR │
+│   21 │ Mon │ Marie  │ EuroDreams   │  7  9 18 32 34  ·  dream  5    │ 2.50 EUR │
+╰──────┴─────┴────────┴──────────────┴────────────────────────────────┴──────────╯
 ```
 
 Three things hold:
@@ -300,11 +325,11 @@ The whole interface moves, including month and weekday names:
 $ blindgrid generate --lang fr
 
               Tirages à jouer — septembre 2026
-╭────────────┬──────────┬──────────────┬───────────────────────┬──────────╮
-│ Date       │ Jour     │ Loterie      │ Numéros               │     Coût │
-├────────────┼──────────┼──────────────┼───────────────────────┼──────────┤
-│ 2026-09-04 │ vendredi │ EuroMillions │ 5 19 28 32 50 · … 1 2 │ 2.50 EUR │
-╰────────────┴──────────┴──────────────┴───────────────────────┴──────────╯
+╭──────┬──────┬──────────────┬────────────────────────────────┬──────────╮
+│ Date │ Jour │ Loterie      │ Numéros                        │     Coût │
+├──────┼──────┼──────────────┼────────────────────────────────┼──────────┤
+│    4 │ ven  │ EuroMillions │  5 19 28 32 50  ·  stars  1  2 │ 2.50 EUR │
+╰──────┴──────┴──────────────┴────────────────────────────────┴──────────╯
 
   Poids · Alloué · Engagé · Grilles · Non dépensé
 ```

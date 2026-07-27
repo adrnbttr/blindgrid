@@ -7,6 +7,7 @@ makes an unspent remainder read as a deliberate outcome rather than a bug.
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -18,7 +19,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from blindgrid.i18n import month_name, t, weekday_name
+from blindgrid.i18n import month_name, t, weekday_short
 from blindgrid.models import Grid, Plan, Pool
 
 # How many shared draws to name before trailing off.
@@ -100,7 +101,15 @@ def format_numbers(
     return text
 
 
-def draws_table(plan: Plan) -> Table:
+# Columns the table can give up, in the order it gives them up. The cost of a
+# grid is fixed per lottery and totalled below, and the weekday can be worked
+# out from the date — so both are comfort rather than content. What is left is
+# the irreducible answer to "what do I play, and when".
+OPTIONAL_COLUMNS = ("cost", "day")
+
+
+def draws_table(plan: Plan, drop: Collection[str] = ()) -> Table:
+    """The draws, with the named optional columns left out."""
     table = Table(
         title=t("plan.title", month=month_name(plan.month), year=plan.year),
         box=box.ROUNDED,
@@ -109,29 +118,51 @@ def draws_table(plan: Plan) -> Table:
         padding=(0, 1),
         expand=False,
     )
-    table.add_column(t("plan.column.date"), style="dim", no_wrap=True)
-    table.add_column(t("plan.column.day"), no_wrap=True)
+    # The month is in the title, so repeating "2026-09-" on every row is noise,
+    # and those columns are what decides whether the table fits a tablet at all.
+    table.add_column(t("plan.column.date"), style="dim", no_wrap=True, justify="right")
+    if "day" not in drop:
+        table.add_column(t("plan.column.day"), no_wrap=True)
     if plan.is_household:
         table.add_column(t("plan.column.player"), style="magenta", no_wrap=True)
     table.add_column(t("plan.column.lottery"), style="bold")
     table.add_column(t("plan.column.numbers"))
-    table.add_column(t("plan.column.cost"), justify="right", no_wrap=True)
+    if "cost" not in drop:
+        table.add_column(t("plan.column.cost"), justify="right", no_wrap=True)
 
     today = date.today()
     layout = NumberLayout.measure(plan)
     for draw in plan.draws:
-        cells = [draw.draw_date.isoformat(), weekday_name(draw.draw_date.weekday())]
+        cells = [str(draw.draw_date.day)]
+        if "day" not in drop:
+            cells.append(weekday_short(draw.draw_date.weekday()))
         if plan.is_household:
             cells.append(draw.player or "")
         cells += [
             draw.lottery.label,
             format_numbers(draw.grids, draw.lottery.pools, layout),
-            format_money(draw.cost, draw.lottery.currency),
         ]
+        if "cost" not in drop:
+            cells.append(format_money(draw.cost, draw.lottery.currency))
         # A plan reopened mid-month still lists the draws it opened with. Dim
         # the ones that have already happened so what is left to play stands out.
         table.add_row(*cells, style="dim strike" if draw.draw_date < today else "")
     return table
+
+
+def best_table(plan: Plan, console: Console) -> Table | None:
+    """The fullest table that fits, or ``None`` when even the leanest will not.
+
+    Rather than one threshold between a table and a list, the table gives up
+    its optional columns one at a time. On the widths between those two
+    extremes — a tablet in portrait, a half-screen terminal — a table missing
+    its cost column still reads far better than a list.
+    """
+    for count in range(len(OPTIONAL_COLUMNS) + 1):
+        table = draws_table(plan, drop=OPTIONAL_COLUMNS[:count])
+        if fits(table, console):
+            return table
+    return None
 
 
 def players_table(plan: Plan) -> Table:
@@ -298,7 +329,7 @@ def compact_draws(plan: Plan) -> Text:
         past = draw.draw_date < today
         heading = Text()
         heading.append(f"{draw.draw_date.day:2d} ", style="bold")
-        heading.append(f"{weekday_name(draw.draw_date.weekday())[:3]}  ", style="dim")
+        heading.append(f"{weekday_short(draw.draw_date.weekday())}  ", style="dim")
         heading.append(draw.lottery.label, style="bold")
         if draw.player:
             heading.append(f"  {draw.player}", style="magenta")
@@ -367,9 +398,8 @@ def render_plan(plan: Plan, console: Console, compact: bool | None = None) -> No
     if not plan.draws:
         console.print(Text(t("plan.empty"), style="bold yellow"), "\n")
     else:
-        table = draws_table(plan)
-        narrow = compact if compact is not None else not fits(table, console)
-        if narrow:
+        table = None if compact else best_table(plan, console)
+        if table is None:
             console.print(Text(f"{month_name(plan.month)} {plan.year}", style="bold"))
             console.print()
             console.print(compact_draws(plan))
