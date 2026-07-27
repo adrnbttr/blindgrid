@@ -127,6 +127,10 @@ MESSAGES: dict[str, str] = {
     "error.config.missing": (
         "Keine Konfiguration unter {path} gefunden.\nLegen Sie mit „blindgrid config init“ eine an."
     ),
+    "error.no.tty": (
+        "Dieser Schritt braucht ein interaktives Terminal. Übergeben Sie die "
+        "Werte als Optionen, etwa: blindgrid generate --budget 30 --lottery Loto"
+    ),
     "error.prefix": "Fehler: ",
     "error.cancelled": "Abgebrochen.",
     "error.budget.invalid": "{who}{value} ist kein gültiger Betrag",

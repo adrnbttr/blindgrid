@@ -94,6 +94,49 @@ jobs:
           test ! -e "$HOME/.local/bin/blindgrid"
           test -f "$HOME/.config/blindgrid/config.toml"  # config is kept on purpose
 
+  # The Python installer is the way in on iOS, where there is no bash and no
+  # git. Nothing here can run on an iPad, so it is exercised on the closest
+  # thing available: a bare interpreter, installing from a source archive.
+  installer-python:
+    name: Installer · python
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Lint the script
+        run: pipx run ruff check install.py
+
+      - name: Install from this checkout
+        run: python install.py --source .
+
+      - name: The module entry point runs
+        run: |
+          python -m blindgrid version
+          python -m blindgrid generate -b 20 -l Loto -m 2026-09 --no-export
+
+      - name: A narrow terminal gets the list layout
+        run: |
+          output=$(COLUMNS=55 python -m blindgrid generate -b 20 -l Loto -m 2026-09 --no-export)
+          echo "$output"
+          if echo "$output" | grep -q '┼'; then
+            echo "::error::a table was drawn at 55 columns"
+            exit 1
+          fi
+          echo "$output" | awk 'length > 55 { print "::error::line of " length; exit 1 }'
+
+      - name: Without a terminal, prompts explain themselves
+        run: |
+          set +e
+          output=$(python -m blindgrid generate -m 2026-09 --no-export < /dev/null 2>&1)
+          echo "$output"
+          echo "$output" | grep -q "interactive terminal" || {
+            echo "::error::expected a readable message, not a traceback"; exit 1; }
+
   installer-windows:
     name: Installer · windows
     runs-on: windows-latest

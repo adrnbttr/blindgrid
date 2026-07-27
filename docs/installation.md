@@ -1,6 +1,7 @@
 # Installation guide
 
-blindgrid runs on Linux, macOS and Windows. The short version:
+blindgrid runs on Linux, macOS, Windows, and on an iPad or iPhone. The short
+version:
 
 **macOS and Linux**
 
@@ -14,8 +15,77 @@ curl -fsSL https://raw.githubusercontent.com/adrnbttr/blindgrid/main/install.sh 
 irm https://raw.githubusercontent.com/adrnbttr/blindgrid/main/install.ps1 | iex
 ```
 
+**iPad and iPhone**, inside [a-Shell](https://holzschu.github.io/a-Shell_iOS/)
+
+```bash
+curl -sL https://raw.githubusercontent.com/adrnbttr/blindgrid/main/install.py | python3
+```
+
 The rest of this page is for when that is not what you want, or when it does
 not go to plan.
+
+## On an iPad or iPhone
+
+### Which terminal
+
+**[a-Shell](https://holzschu.github.io/a-Shell_iOS/)** — free, on the App
+Store, and the one this is tested against. It ships its own Python and pip, so
+nothing has to be compiled and nothing has to be jailbroken. Install it, open
+it, and paste the command above.
+
+Two things it does not have, which is why there is a third installer:
+
+- **no bash**, so `install.sh` cannot run — `install.py` needs only Python;
+- **no git**, so `pip install git+…` fails — the installer pulls a source
+  archive instead.
+
+Alternatives, if you would rather not use a-Shell:
+
+| | Verdict |
+| --- | --- |
+| **iSH** | Works. Emulates x86 Alpine, so it is noticeably slower, and you install Python yourself with `apk add python3`. |
+| **Blink Shell** or **Termius** | Best of all, but as SSH clients: the tool runs on a machine elsewhere and your iPad is the screen. Nothing to install on the device. |
+| **Pythonista**, **Pyto** | Python IDEs rather than shells. A command-line tool with subcommands is awkward there. |
+
+### Running it
+
+a-Shell does not always put a pip-installed command on the `PATH`, so use the
+module form:
+
+```bash
+python3 -m blindgrid generate
+python3 -m blindgrid config show
+```
+
+### Prompts
+
+If your shell cannot draw interactive prompts, pass the values as options —
+every prompt has one, and the tool then needs no terminal at all:
+
+```bash
+python3 -m blindgrid generate --budget 30 --lottery Loto
+python3 -m blindgrid generate --budget "Adrien=20" --budget "Marie=12"
+```
+
+Asked for something it cannot prompt for, blindgrid says so and shows the
+option to use instead, rather than failing with a traceback.
+
+### The screen
+
+An iPad in portrait gives you around 60 columns, which is not enough for the
+table. blindgrid measures and switches to a list where each draw's numbers sit
+on their own line, unwrapped and untruncated — see
+[On a tablet or a phone](../README.md#on-a-tablet-or-a-phone). Rotating to
+landscape brings the table back. `--compact` and `--table` override the
+choice.
+
+### Where your files go
+
+a-Shell sandboxes each app, so everything lands inside its own container —
+`~/Documents/` is the part you can reach from the Files app. `blindgrid config
+show` prints the exact paths. Worth knowing: **uninstalling a-Shell deletes
+your configuration with it**, so if your budget ceiling matters to you, keep a
+copy of `config.toml` somewhere in iCloud.
 
 ## What the installer does
 
@@ -32,9 +102,14 @@ your home directory, and never installs a third-party tool behind your back —
 if neither uv nor pipx is present, it falls back to a plain virtual
 environment built with the Python you already have.
 
-Both scripts are exercised on every push: CI installs the project with them on
-a clean Linux, macOS and Windows runner, runs the installed command, then
-uninstalls and checks that the configuration survived.
+There are three, one per world: `install.sh` for macOS and Linux,
+`install.ps1` for Windows, and `install.py` wherever only Python exists —
+which is what makes iOS possible, since a-Shell has neither bash nor git.
+
+All three are exercised on every push: CI installs the project with them on
+clean Linux, macOS and Windows runners, runs the installed command, and
+uninstalls again. The Python one is additionally checked at 55 columns, and
+with no terminal attached, since that is what an iPad looks like.
 
 ### Reading it before running it
 
@@ -58,14 +133,18 @@ respectively.
 
 ### Options
 
-| Unix | Windows | Effect |
-| --- | --- | --- |
-| `--method uv\|pipx\|venv` | `-Method Uv\|Pipx\|Venv` | Force an install method instead of auto-detecting. |
-| `--source <path\|url>` | `-Source <path\|url>` | Install from somewhere else — a local clone, a fork. |
-| `--ref <branch\|tag>` | `-Ref <branch\|tag>` | Install a specific git ref. Default `main`. |
-| `--no-config` | `-NoConfig` | Do not create a starter configuration. |
-| `--uninstall` | `-Uninstall` | Remove blindgrid, keeping your configuration. |
-| `--help` | `Get-Help .\install.ps1` | Show the options. |
+| Unix | Windows | Python | Effect |
+| --- | --- | --- | --- |
+| `--method uv\|pipx\|venv` | `-Method Uv\|Pipx\|Venv` | — | Force an install method instead of auto-detecting. |
+| `--source <path\|url>` | `-Source <path\|url>` | `--source` | Install from somewhere else — a local clone, a fork. |
+| `--ref <branch\|tag>` | `-Ref <branch\|tag>` | `--ref` | Install a specific version. Default `main`. |
+| `--no-config` | `-NoConfig` | `--no-config` | Do not create a starter configuration. |
+| `--uninstall` | `-Uninstall` | — | Remove blindgrid, keeping your configuration. |
+| — | — | `--check` | Report what would happen, install nothing. |
+| `--help` | `Get-Help .\install.ps1` | `--help` | Show the options. |
+
+The Python installer has no `--uninstall`: it installs with pip, so pip
+removes it — `python3 -m pip uninstall blindgrid`.
 
 Environment: on Unix, `BLINDGRID_PREFIX` changes the install prefix (default
 `~/.local`). `NO_COLOR` turns off colour on both.
@@ -92,6 +171,7 @@ machine-written and regenerable.
 | **Linux** | `~/.config/blindgrid/` | `~/.local/state/blindgrid/` |
 | **macOS** | `~/.config/blindgrid/` | `~/.local/state/blindgrid/` |
 | **Windows** | `%APPDATA%\blindgrid\` | `%LOCALAPPDATA%\blindgrid\` |
+| **iOS** | inside the shell app's own sandbox | same |
 
 Linux and macOS follow the XDG base directory spec. macOS uses `~/.config`
 rather than `~/Library/Application Support` because this is a terminal tool

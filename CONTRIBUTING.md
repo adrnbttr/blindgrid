@@ -57,7 +57,9 @@ a change to either is exercised for real rather than merely linted.
 
 If you touched `install.ps1` and have no Windows machine, push and let CI run
 PSScriptAnalyzer and the install-uninstall round trip — that is how it is
-maintained here.
+maintained here. The same goes for `install.py`, which exists for iOS: no CI
+runner is an iPad, so it is checked on a bare interpreter, at 55 columns, and
+with no terminal attached.
 
 ### Platform-specific code
 

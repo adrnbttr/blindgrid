@@ -9,6 +9,7 @@ rest lives in the config file.
 from __future__ import annotations
 
 import re
+import sys
 from dataclasses import replace
 from datetime import date
 from decimal import Decimal, InvalidOperation
@@ -98,11 +99,21 @@ def _cancelled() -> NoReturn:
 
 
 def _answer(question: questionary.Question) -> object:
-    """Ask ``question``, treating an interrupted prompt as a cancellation."""
+    """Ask ``question``, treating an interrupted prompt as a cancellation.
+
+    Without a terminal to draw on — a pipe, a cron job, or one of the iOS
+    shells — prompt_toolkit raises a bare OSError from deep inside the event
+    loop. Catch it and say what to do instead, since every prompt here has a
+    command-line option that skips it.
+    """
+    if not sys.stdin.isatty():
+        _fatal(t("error.no.tty"))
     try:
         result = question.ask()
     except KeyboardInterrupt:
         _cancelled()
+    except OSError as exc:  # pragma: no cover - depends on the host terminal
+        _fatal(t("error.no.tty") + f" ({exc})")
     if result is None:
         _cancelled()
     return result

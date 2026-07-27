@@ -20,6 +20,7 @@
   <a href="#install">Install</a> ·
   <a href="#what-this-is-not">What it refuses to do</a> ·
   <a href="#playing-as-a-household">Households</a> ·
+  <a href="#on-a-tablet-or-a-phone">Tablets</a> ·
   <a href="#language">Language</a> ·
   <a href="#adding-a-lottery-from-any-country">Add your own lottery</a> ·
   <a href="#responsible-gambling">Responsible gambling</a>
@@ -77,7 +78,7 @@ different kind of predictable.
 
 ## Install
 
-Runs on Linux, macOS and Windows.
+Runs on Linux, macOS, Windows, and iOS through a-Shell.
 
 **macOS and Linux**
 
@@ -107,6 +108,16 @@ pipx install git+https://github.com/adrnbttr/blindgrid.git
 Python 3.11 or newer is required, except with uv, which brings its own.
 Uninstalling is `install.sh --uninstall` / `install.ps1 -Uninstall`, and your
 config survives it.
+
+**iPad and iPhone**, in [a-Shell](https://holzschu.github.io/a-Shell_iOS/)
+(free, App Store):
+
+```bash
+curl -sL https://raw.githubusercontent.com/adrnbttr/blindgrid/main/install.py | python3
+```
+
+Then `python3 -m blindgrid generate`. Every dependency is pure Python, so
+nothing needs compiling — see [On a tablet or a phone](#on-a-tablet-or-a-phone).
 
 **[Full installation guide](docs/installation.md)** — per-platform details,
 other install methods, file locations, troubleshooting, updating, uninstalling.
@@ -145,6 +156,26 @@ month turns. It is a self-contained snapshot, so editing your config
 afterwards never changes a plan you already hold. Draws whose date has passed
 are struck through when the plan is shown again, so what is left to play is
 obvious.
+
+## On a tablet or a phone
+
+The plan lays itself out to fit. Below roughly 80 columns — an iPad in
+portrait, a phone, a split view — the table is dropped for a list, and the
+numbers get a line to themselves:
+
+```
+September 2026
+
+ 8 Tue  EuroMillions  Adrien  2.50 EUR
+    10 11 30 34 47  ·  stars  8 12
+
+ 9 Wed  Loto  Adrien  2.20 EUR
+     7 20 22 34 35  ·  lucky  2
+```
+
+The numbers are the one thing you copy onto a paper slip, so they are never
+wrapped and nothing is ever cut to `Eur…`. It stays readable down to about 40
+columns. `--compact` and `--table` force either layout.
 
 ## Playing as a household
 
@@ -234,6 +265,13 @@ Useful options on `generate`:
 | `-m, --month 2026-09` | Plan a month other than the current one. |
 | `--force` | Draw a new plan even though this month already has one. |
 | `--no-export` | Print the plan without writing `plan.md`. |
+| `--lang fr` | Interface language for this run. See [Language](#language). |
+| `--compact` / `--table` | Force the narrow layout, or the table. Default: whichever fits. |
+| `-c, --config path` | Use a specific configuration file. |
+
+Every prompt has an option that skips it, so the whole tool works without an
+interactive terminal — in a script, over SSH, or in a shell that cannot draw
+prompts.
 
 ## Language
 

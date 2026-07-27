@@ -29,11 +29,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   German, chosen with `--lang`, `BLINDGRID_LANG`, the config file or your
   system locale. Tests enforce that every catalogue matches the English one
   key for key and placeholder for placeholder.
-
 - A month is now drawn once. `generate` saves the plan to the state directory
   and shows it again on later runs, so it can be found while the grids are
   being filled in. `--force` draws a new one and states what it replaces.
 - `config show` reports where the current plan lives and when it was drawn.
+- **Runs on an iPad.** `install.py` installs anywhere Python exists, which is
+  what iOS needs: a-Shell has neither bash nor git, so it pulls a source
+  archive rather than a git URL. `python -m blindgrid` works where a
+  pip-installed command does not reach the PATH.
+- The plan lays itself out for narrow terminals. Below the width the table
+  needs, each draw becomes two lines with its numbers unwrapped on their own —
+  at 60 columns the table used to stack them one digit per line and cut the
+  lottery name to `Eur…`. `--compact` and `--table` force either layout.
 
 ### Changed
 
@@ -44,7 +51,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Amounts accept the way people type them: `30 €`, `30€`, `30 EUR`, commas and
   non-breaking spaces. Nonsense is still refused.
 - `--lang` is accepted before the command as well as after it.
-
 - The stored plan is one file, replaced when the month turns, and a
   self-contained snapshot: editing the configuration afterwards does not alter
   a plan already drawn. This narrows the original "no persistence" rule to
@@ -54,6 +60,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Asked to prompt with no terminal attached — a pipe, a cron job, one of the
+  iOS shells — the tool now says which option to use instead, rather than
+  raising a bare `OSError` from inside prompt_toolkit.
 - The help screen no longer mixed languages: Typer takes a command's docstring
   as its help text unless told otherwise, which left the top-level commands in
   English while the sub-apps were translated.
