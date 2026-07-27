@@ -119,22 +119,19 @@ jobs:
           python -m blindgrid version
           python -m blindgrid generate -b 20 -l Loto -m 2026-09 --no-export
 
-      # What matters on a narrow screen is not which layout is chosen — the
-      # table sheds columns before giving up — but that nothing overflows and
-      # nothing is cut. A truncated lottery name or a split row of numbers is
-      # the failure worth catching.
-      - name: Nothing overflows or gets truncated when narrow
+      # Overflow is covered by the test suite at six widths; what this adds
+      # is the real installed command on a real narrow terminal. Truncation is
+      # the tell that the layout gave up rather than adapted.
+      - name: Nothing is truncated when narrow
         run: |
           for width in 40 55 70; do
-            output=$(COLUMNS=$width python -m blindgrid generate \
-              -b 20 -l Loto -m 2026-09 --no-export --force)
             echo "--- $width columns ---"
-            echo "$output"
-            echo "$output" | awk -v w="$width" \
-              'length > w { print "::error::line of " length " at width " w; exit 1 }'
-            case "$output" in
-              *…*) echo "::error::something was truncated at $width columns"; exit 1 ;;
-            esac
+            COLUMNS=$width python -m blindgrid generate \
+              -b 20 -l Loto -m 2026-09 --no-export --force | tee /tmp/out.txt
+            if grep -q '…' /tmp/out.txt; then
+              echo "::error::something was truncated at $width columns"
+              exit 1
+            fi
           done
 
       - name: Without a terminal, prompts explain themselves

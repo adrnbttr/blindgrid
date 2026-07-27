@@ -390,36 +390,52 @@ def fits(renderable: Table, console: Console) -> bool:
 def render_plan(plan: Plan, console: Console, compact: bool | None = None) -> None:
     """Print the full plan: draws, allocation summary, notes and totals.
 
-    ``compact`` forces the narrow layout on or off; left as ``None`` it is
-    chosen by measuring whether the table actually fits.
+    ``compact`` forces the narrow layout on or off; left as ``None`` every
+    part is measured and laid out to fit.
     """
     console.print()
 
     if not plan.draws:
-        console.print(Text(t("plan.empty"), style="bold yellow"), "\n")
-    else:
-        table = None if compact else best_table(plan, console)
-        if table is None:
-            console.print(Text(f"{month_name(plan.month)} {plan.year}", style="bold"))
-            console.print()
-            console.print(compact_draws(plan))
-            console.print(compact_summary(plan))
-            _print_notes(plan, console)
-            console.print(Text(t("plan.disclaimer"), style="dim italic"))
-            console.print()
-            return
-
-        console.print(table)
+        # An empty plan is when the notes matter most: they are the only thing
+        # saying why nothing could be planned.
+        console.print(Text(t("plan.empty"), style="bold yellow"))
+        console.print(compact_summary(plan))
+        _print_notes(plan, console)
         console.print()
+        console.print(Text(t("plan.disclaimer"), style="dim italic"), width=76)
+        return
 
-    if plan.is_household:
-        console.print(players_table(plan))
+    table = None if compact else best_table(plan, console)
+    if table is None:
+        console.print(Text(f"{month_name(plan.month)} {plan.year}", style="bold"))
         console.print()
+        console.print(compact_draws(plan))
+        console.print(compact_summary(plan))
+        _print_notes(plan, console)
+        console.print(Text(t("plan.disclaimer"), style="dim italic"))
+        console.print()
+        return
 
-    console.print(Group(summary_table(plan)))
-    _print_notes(plan, console)
+    console.print(table)
     console.print()
-    console.print(totals_panel(plan))
+
+    # The summaries get the same treatment. Letting them through unmeasured is
+    # how "Lottery" and "Allocated" ended up as "Lotte…" and "Alloc…" on a
+    # screen the draws table had already adapted to.
+    players = players_table(plan) if plan.is_household else None
+    summary = summary_table(plan)
+    if fits(summary, console) and (players is None or fits(players, console)):
+        if players is not None:
+            console.print(players)
+            console.print()
+        console.print(Group(summary))
+        _print_notes(plan, console)
+        console.print()
+        console.print(totals_panel(plan))
+    else:
+        console.print(compact_summary(plan))
+        _print_notes(plan, console)
+
     console.print(Text(t("plan.disclaimer"), style="dim italic"), width=76)
 
 
@@ -428,4 +444,3 @@ def _print_notes(plan: Plan, console: Console) -> None:
     if annotations is not None:
         console.print()
         console.print(annotations)
-    console.print()
