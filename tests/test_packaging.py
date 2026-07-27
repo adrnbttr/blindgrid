@@ -37,8 +37,7 @@ def test_every_dependency_stays_pure_python() -> None:
     """
     known_pure = {"typer", "rich", "questionary", "tomli-w"}
     declared = {
-        requirement.split(">=")[0].split("[")[0].strip()
-        for requirement in PROJECT["dependencies"]
+        requirement.split(">=")[0].split("[")[0].strip() for requirement in PROJECT["dependencies"]
     }
     assert declared == known_pure, (
         "a dependency changed: confirm it ships no compiled extension, or iOS "
