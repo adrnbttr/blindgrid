@@ -19,6 +19,7 @@ MESSAGES: dict[str, str] = {
     "option.month": "Zu planender Monat, als JJJJ-MM. Standard ist der laufende Monat.",
     "option.force": "Neu ziehen, auch wenn für diesen Monat schon ein Plan besteht.",
     "option.export": "Den Markdown-Export schreiben.",
+    "option.compact": "Schmale Ansicht oder Tabelle erzwingen. Standard: nach Breite.",
     "option.lang": "Sprache für diesen Lauf.",
     "prompt.budget": "Budget für diesen Monat?",
     "prompt.budget.player": "Budget für {name}? (leer lassen, um auszusetzen)",

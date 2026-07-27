@@ -277,9 +277,11 @@ def _collect_budgets(
     return budgets
 
 
-def _finish(plan: Plan, settings: config.Settings, export: bool) -> None:
+def _finish(
+    plan: Plan, settings: config.Settings, export: bool, compact: bool | None = None
+) -> None:
     """Render a plan and, unless asked not to, refresh the Markdown export."""
-    render_plan(plan, console)
+    render_plan(plan, console, compact)
     if export:
         written = export_plan(plan, settings.export_path)
         console.print(Text(t("plan.exported", path=written), style="dim"))
@@ -315,6 +317,10 @@ def generate(
         typer.Option("--force", help=t("option.force")),
     ] = False,
     export: Annotated[bool, typer.Option("--export/--no-export", help=t("option.export"))] = True,
+    compact: Annotated[
+        bool | None,
+        typer.Option("--compact/--table", help=t("option.compact"), show_default=False),
+    ] = None,
 ) -> None:
     """Build this month's plan: how much to spend, which draws, which numbers.
 
@@ -340,7 +346,7 @@ def generate(
                 style="dim",
             )
         )
-        _finish(existing.plan, settings, export)
+        _finish(existing.plan, settings, export, compact)
         return
 
     console.print()
@@ -399,7 +405,7 @@ def generate(
         # a warning, not throwing the month's numbers away.
         err_console.print(Text(t("error.plan.unsaved", reason=exc), style="yellow"))
 
-    _finish(plan, settings, export)
+    _finish(plan, settings, export, compact)
 
 
 @config_app.callback()

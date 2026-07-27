@@ -13,6 +13,7 @@ from decimal import Decimal
 
 from rich import box
 from rich.console import Console, Group
+from rich.measure import Measurement
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -276,25 +277,125 @@ def totals_panel(plan: Plan) -> Panel:
     )
 
 
-def render_plan(plan: Plan, console: Console) -> None:
-    """Print the full plan: draws, allocation summary, notes and totals."""
+def compact_draws(plan: Plan) -> Text:
+    """The plan as a list, for terminals too narrow for the table.
+
+    Two lines per draw. The numbers get a line of their own and are never
+    allowed to wrap: they are the one thing being copied onto a paper slip,
+    and a table squeezed into 60 columns turns them into a vertical stack of
+    single digits with the lottery name cut to "Eur…".
+
+    Readable from about 40 columns, which covers a phone and an iPad in
+    portrait.
+    """
+    text = Text()
+    today = date.today()
+
+    for index, draw in enumerate(plan.draws):
+        if index:
+            text.append("\n")
+
+        past = draw.draw_date < today
+        heading = Text()
+        heading.append(f"{draw.draw_date.day:2d} ", style="bold")
+        heading.append(f"{weekday_name(draw.draw_date.weekday())[:3]}  ", style="dim")
+        heading.append(draw.lottery.label, style="bold")
+        if draw.player:
+            heading.append(f"  {draw.player}", style="magenta")
+        heading.append(f"  {format_money(draw.cost, draw.lottery.currency)}", style="dim")
+        if past:
+            heading.stylize("dim strike")
+        text.append(heading)
+
+        text.append("\n    ")
+        numbers = format_numbers(draw.grids, draw.lottery.pools)
+        if past:
+            numbers.stylize("dim strike")
+        text.append(numbers)
+        text.append("\n")
+
+    return text
+
+
+def compact_summary(plan: Plan) -> Text:
+    """Per-player and total figures as plain lines rather than tables."""
+    currency = plan.currency
+    text = Text()
+
+    for name in plan.player_names:
+        budget = plan.budget_of(name)
+        committed = plan.committed_by(name)
+        text.append(f"{name}  ", style="bold magenta")
+        text.append(
+            f"{format_money(committed, currency)} / {format_money(budget, currency)}\n",
+            style="dim",
+        )
+
+    if plan.player_names:
+        text.append("\n")
+
+    for key, value, style in (
+        ("plan.column.budget", plan.budget, "bold"),
+        ("plan.column.committed", plan.total_committed, "bold green"),
+        ("plan.column.unspent", plan.unspent, "bold"),
+    ):
+        text.append(f"{t(key):<12}", style="dim")
+        text.append(f"{format_money(value, currency)}\n", style=style)
+
+    return text
+
+
+def fits(renderable: Table, console: Console) -> bool:
+    """Whether ``renderable`` can be drawn without squeezing its columns.
+
+    Measured against an effectively unbounded width: asking for a measurement
+    with the console's own options caps the answer at the console width, which
+    would make everything look like it fits.
+    """
+    unbounded = console.options.update(max_width=10_000)
+    return Measurement.get(console, unbounded, renderable).maximum <= console.width
+
+
+def render_plan(plan: Plan, console: Console, compact: bool | None = None) -> None:
+    """Print the full plan: draws, allocation summary, notes and totals.
+
+    ``compact`` forces the narrow layout on or off; left as ``None`` it is
+    chosen by measuring whether the table actually fits.
+    """
     console.print()
-    if plan.draws:
-        console.print(draws_table(plan))
-        console.print()
-    else:
+
+    if not plan.draws:
         console.print(Text(t("plan.empty"), style="bold yellow"), "\n")
+    else:
+        table = draws_table(plan)
+        narrow = compact if compact is not None else not fits(table, console)
+        if narrow:
+            console.print(Text(f"{month_name(plan.month)} {plan.year}", style="bold"))
+            console.print()
+            console.print(compact_draws(plan))
+            console.print(compact_summary(plan))
+            _print_notes(plan, console)
+            console.print(Text(t("plan.disclaimer"), style="dim italic"))
+            console.print()
+            return
+
+        console.print(table)
+        console.print()
 
     if plan.is_household:
         console.print(players_table(plan))
         console.print()
 
     console.print(Group(summary_table(plan)))
+    _print_notes(plan, console)
+    console.print()
+    console.print(totals_panel(plan))
+    console.print(Text(t("plan.disclaimer"), style="dim italic"), width=76)
+
+
+def _print_notes(plan: Plan, console: Console) -> None:
     annotations = notes(plan)
     if annotations is not None:
         console.print()
         console.print(annotations)
-    console.print()
-    console.print(totals_panel(plan))
-    console.print(Text(t("plan.disclaimer"), style="dim italic"), width=76)
     console.print()

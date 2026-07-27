@@ -155,3 +155,73 @@ def test_notes_explain_a_skipped_lottery(
     thin = build_plan(budget=Decimal("5.00"), lotteries=lotteries, year=2026, month=9, rng=rng)
     output = render(thin)
     assert "skipped this month" in output
+
+
+# ------------------------------------------------- narrow terminals (phones, tablets)
+
+
+def test_the_table_is_used_when_it_fits(plan: Plan) -> None:
+    output = render(plan, width=130)
+    assert "╭" in output and "│" in output
+
+
+@pytest.mark.parametrize("width", [40, 50, 60, 70])
+def test_a_narrow_terminal_drops_the_table(width: int, plan: Plan) -> None:
+    """Squeezed into a phone or a tablet, the table shreds the numbers."""
+    output = render(plan, width=width)
+    assert "┼" not in output, "a table survived at a width that cannot hold it"
+
+
+@pytest.mark.parametrize("width", [40, 50, 60, 70])
+def test_numbers_are_never_wrapped_when_narrow(width: int, plan: Plan) -> None:
+    """The numbers get copied onto a paper slip; splitting them is the one
+    thing that must not happen."""
+    output = render(plan, width=width)
+
+    for draw in plan.draws:
+        first = draw.grids[0]
+        rendered = " ".join(str(n).rjust(2) for n in first.numbers).strip()
+        assert rendered in output, f"numbers split at width {width}"
+
+
+@pytest.mark.parametrize("width", [40, 50, 60, 70, 90, 130])
+def test_no_line_ever_overflows(width: int, household: Plan) -> None:
+    for line in render(household, width=width).splitlines():
+        assert len(line) <= width, f"line of {len(line)} at width {width}: {line!r}"
+
+
+def test_nothing_is_truncated_when_narrow(plan: Plan) -> None:
+    """No ellipsis: a lottery called "Eur…" is worse than a second line."""
+    assert "…" not in render(plan, width=50)
+
+
+def test_a_narrow_plan_still_reports_the_totals(household: Plan) -> None:
+    output = render(household, width=55)
+
+    assert f"{household.total_committed:.2f}" in output
+    assert f"{household.unspent:.2f}" in output
+    assert "Adrien" in output and "Marie" in output
+
+
+def test_the_layout_can_be_forced_either_way(plan: Plan) -> None:
+    console = Console(width=130, no_color=True)
+    with console.capture() as captured:
+        render_plan(plan, console, compact=True)
+    assert "┼" not in captured.get()
+
+    narrow = Console(width=60, no_color=True)
+    with narrow.capture() as captured:
+        render_plan(plan, narrow, compact=False)
+    assert "┼" in captured.get()
+
+
+def test_a_household_plan_names_players_when_narrow(household: Plan) -> None:
+    output = render(household, width=60)
+    assert "Adrien" in output and "Marie" in output
+
+
+def test_an_empty_plan_is_fine_when_narrow(
+    lotteries: tuple[Lottery, ...], rng: random.Random
+) -> None:
+    empty = build_plan(budget=Decimal("1.00"), lotteries=lotteries, year=2026, month=9, rng=rng)
+    assert "No draw could be planned" in render(empty, width=45)

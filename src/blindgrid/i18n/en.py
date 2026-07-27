@@ -21,6 +21,7 @@ MESSAGES: dict[str, str] = {
     "option.month": "Month to plan, as YYYY-MM. Defaults to now.",
     "option.force": "Draw a new plan even if this month already has one.",
     "option.export": "Write the Markdown export.",
+    "option.compact": "Force the narrow layout, or the table. Default: fit to the terminal.",
     "option.lang": "Language for this run.",
     # Prompts
     "prompt.budget": "Budget for this month?",

@@ -69,7 +69,10 @@ ignore = ["ANN401"]
 ban-relative-imports = "all"
 
 [tool.ruff.lint.pylint]
-max-args = 8
+# A Typer command's parameters are its command-line options: they are the
+# public interface, and grouping them into an object would hide it.
+max-args = 10
+max-positional-args = 10
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
