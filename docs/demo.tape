@@ -69,18 +69,9 @@ Type "clear"
 Enter
 Sleep 300ms
 
-# The same plan comes back in another language. Each run also shows that the
-# month is drawn once: the numbers are identical every time.
-Type "blindgrid generate --lang es -m 2026-09"
+# Running it again returns the plan already drawn — same numbers, every time.
+Type "blindgrid generate -m 2026-09"
 Sleep 400ms
 Enter
-Sleep 5s
+Sleep 3.5s
 
-Type "clear"
-Enter
-Sleep 300ms
-
-Type "blindgrid generate --lang de -m 2026-09"
-Sleep 400ms
-Enter
-Sleep 5.5s

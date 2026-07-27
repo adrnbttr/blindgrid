@@ -30,7 +30,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Translations.** The interface is available in English, French, Spanish and
   German, chosen with `--lang`, `BLINDGRID_LANG`, the config file or your
   system locale. Tests enforce that every catalogue matches the English one
-  key for key and placeholder for placeholder.
+  key for key and placeholder for placeholder. Terms follow each country's own
+  vocabulary: a played grid is an *apuesta* in Spanish, a *Tipp* in German.
+- **Published on PyPI**, so installing is `pip install blindgrid` rather than a
+  ninety-character URL. Releases run from a tag and refuse to publish unless
+  the tag matches the declared version, the changelog carries an entry, and the
+  built wheel installs and runs.
 - A month is now drawn once. `generate` saves the plan to the state directory
   and shows it again on later runs, so it can be found while the grids are
   being filled in. `--force` draws a new one and states what it replaces.

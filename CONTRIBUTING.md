@@ -120,3 +120,7 @@ The tape points the tool at a throwaway config in a temporary directory, so
 recording never touches your own `config.toml`. Regenerate after any change to
 `render.py`, and expect different numbers every time — the demo draws from the
 real CSPRNG like everything else.
+
+Keep it in English and keep it short. Switching languages mid-recording spends
+five seconds saying what one line of the README says better, and every second
+is weight on a page people load before deciding whether to read it.

@@ -281,17 +281,37 @@ prompts.
 
 ## Language
 
-The interface speaks **English, French, Spanish and German**. It follows your
-system locale by default, so there is usually nothing to set:
+The interface speaks **English, French, Spanish and German**, and follows your
+system locale by default — so there is usually nothing to set at all.
 
-```bash
-blindgrid generate --lang fr     # just this run
-blindgrid config edit            # pick one and keep it
-export BLINDGRID_LANG=es         # for a shell session
-```
+| | |
+| --- | --- |
+| `blindgrid generate --lang fr` | Just this run. Works before the command too. |
+| `blindgrid config edit` | Pick one and keep it. |
+| `export BLINDGRID_LANG=es` | For a shell session. |
+| `language = "de"` in `config.toml` | Written by `config edit`, or by hand. |
 
 Order of precedence: `--lang`, then `BLINDGRID_LANG`, then `language` in the
 config file, then your system locale, then English.
+
+The whole interface moves, including month and weekday names:
+
+```
+$ blindgrid generate --lang fr
+
+              Tirages à jouer — septembre 2026
+╭────────────┬──────────┬──────────────┬───────────────────────┬──────────╮
+│ Date       │ Jour     │ Loterie      │ Numéros               │     Coût │
+├────────────┼──────────┼──────────────┼───────────────────────┼──────────┤
+│ 2026-09-04 │ vendredi │ EuroMillions │ 5 19 28 32 50 · … 1 2 │ 2.50 EUR │
+╰────────────┴──────────┴──────────────┴───────────────────────┴──────────╯
+
+  Poids · Alloué · Engagé · Grilles · Non dépensé
+```
+
+Terms follow each country's own vocabulary rather than a literal translation:
+a played grid is an *apuesta* in Spanish and a *Tipp* in German, which is what
+the operators there call it.
 
 Only the interface is translated. Lottery labels, pool names and player names
 are printed exactly as you wrote them, and the weekday keys in the config file
