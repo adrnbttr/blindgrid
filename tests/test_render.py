@@ -161,8 +161,10 @@ def test_notes_explain_a_skipped_lottery(
 
 
 def test_the_table_is_used_when_it_fits(plan: Plan) -> None:
+    # Corners vary by platform — rich squares them off on the Windows console —
+    # so the junction character is what identifies a table everywhere.
     output = render(plan, width=130)
-    assert "╭" in output and "│" in output
+    assert "┼" in output and "│" in output
 
 
 @pytest.mark.parametrize("width", [40, 50, 60, 70])

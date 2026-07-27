@@ -132,7 +132,8 @@ jobs:
       - name: Without a terminal, prompts explain themselves
         run: |
           set +e
-          output=$(python -m blindgrid generate -m 2026-09 --no-export < /dev/null 2>&1)
+          # A month the earlier steps have not drawn, so a prompt is reached.
+          output=$(python -m blindgrid generate -m 2026-11 --no-export < /dev/null 2>&1)
           echo "$output"
           echo "$output" | grep -q "interactive terminal" || {
             echo "::error::expected a readable message, not a traceback"; exit 1; }
