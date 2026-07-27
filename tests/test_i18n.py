@@ -240,9 +240,15 @@ def _help(command: list[str], language: str) -> str:
         check=False,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         env={**os.environ, "BLINDGRID_LANG": language, "COLUMNS": "200", "NO_COLOR": "1"},
     )
-    return result.stdout
+    # Both streams: Click puts help on stdout, but a runner that cannot decode
+    # the box characters can leave it empty and complain on stderr instead.
+    captured = f"{result.stdout or ''}\n{result.stderr or ''}"
+    assert captured.strip(), f"no output from {' '.join(command) or 'blindgrid'} --help"
+    return captured
 
 
 @pytest.mark.parametrize(
