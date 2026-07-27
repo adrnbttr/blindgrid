@@ -1,7 +1,14 @@
 # Installation guide
 
-blindgrid runs on Linux, macOS, Windows, and on an iPad or iPhone. The short
-version:
+blindgrid runs on Linux, macOS, Windows, and on an iPad or iPhone.
+
+```bash
+pip install blindgrid
+```
+
+That is enough if you have Python 3.11 or newer and do not mind writing your
+own configuration. The installers below choose a method for you, create a
+starter config and sort out your `PATH`:
 
 **macOS and Linux**
 
@@ -16,6 +23,12 @@ irm https://raw.githubusercontent.com/adrnbttr/blindgrid/main/install.ps1 | iex
 ```
 
 **iPad and iPhone**, inside [a-Shell](https://holzschu.github.io/a-Shell_iOS/)
+
+```bash
+pip install blindgrid
+```
+
+or, to have a starter configuration written for you:
 
 ```bash
 curl -sL https://raw.githubusercontent.com/adrnbttr/blindgrid/main/install.py | python3
@@ -193,20 +206,23 @@ All three are equivalent. Pick whichever tool you already use.
 **uv** — fastest, and brings its own Python if you have none:
 
 ```bash
-uv tool install git+https://github.com/adrnbttr/blindgrid.git
+uv tool install blindgrid
 ```
 
 **pipx** — the classic choice for Python CLIs:
 
 ```bash
-pipx install git+https://github.com/adrnbttr/blindgrid.git
+pipx install blindgrid
 ```
+
+For an unreleased change, point either at the repository instead:
+`uv tool install git+https://github.com/adrnbttr/blindgrid.git`.
 
 **A virtualenv you manage yourself:**
 
 ```bash
 python3 -m venv ~/.local/share/blindgrid/venv
-~/.local/share/blindgrid/venv/bin/pip install git+https://github.com/adrnbttr/blindgrid.git
+~/.local/share/blindgrid/venv/bin/pip install blindgrid
 ln -s ~/.local/share/blindgrid/venv/bin/blindgrid ~/.local/bin/blindgrid
 ```
 

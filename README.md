@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/logo.svg" alt="" width="88" height="88">
+<img src="https://raw.githubusercontent.com/adrnbttr/blindgrid/main/docs/logo.svg" alt="" width="88" height="88">
 
 <h1>blindgrid</h1>
 
@@ -12,7 +12,7 @@
 <p>
   <a href="https://github.com/adrnbttr/blindgrid/actions/workflows/ci.yml"><img src="https://github.com/adrnbttr/blindgrid/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
+  <a href="https://github.com/adrnbttr/blindgrid/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/predictions-none-lightgrey" alt="Predictions: none">
 </p>
 
@@ -26,7 +26,7 @@
   <a href="#responsible-gambling">Responsible gambling</a>
 </p>
 
-<img src="docs/demo.gif" alt="blindgrid prompting for a budget, then printing a month of draws" width="880">
+<img src="https://raw.githubusercontent.com/adrnbttr/blindgrid/main/docs/demo.gif" alt="blindgrid prompting for a budget, then printing a month of draws" width="880">
 
 </div>
 
@@ -80,6 +80,14 @@ different kind of predictable.
 
 Runs on Linux, macOS, Windows, and iOS through a-Shell.
 
+```bash
+pip install blindgrid        # or: uv tool install blindgrid
+```
+
+That is the whole of it if you already have Python 3.11 or newer. The scripts
+below add a little more: they pick an install method for you, write a starter
+configuration, and tell you what to put on your `PATH`.
+
 **macOS and Linux**
 
 ```bash
@@ -98,14 +106,9 @@ tells you what to add to your `PATH` if anything is missing. Neither asks for
 directory. Prefer to read the script first? Download it and open it — both are
 short, and both are linted in CI (shellcheck, PSScriptAnalyzer).
 
-If you already have a favourite tool, skip the script entirely:
-
-```bash
-uv tool install git+https://github.com/adrnbttr/blindgrid.git
-pipx install git+https://github.com/adrnbttr/blindgrid.git
-```
-
 Python 3.11 or newer is required, except with uv, which brings its own.
+**3.11 is a floor, not a default**: it is the newest Python a-Shell ships, and
+raising it would drop iPad support — a test says so.
 Uninstalling is `install.sh --uninstall` / `install.ps1 -Uninstall`, and your
 config survives it.
 
@@ -113,13 +116,16 @@ config survives it.
 (free, App Store):
 
 ```bash
-curl -sL https://raw.githubusercontent.com/adrnbttr/blindgrid/main/install.py | python3
+pip install blindgrid
 ```
 
-Then `python3 -m blindgrid generate`. Every dependency is pure Python, so
-nothing needs compiling — see [On a tablet or a phone](#on-a-tablet-or-a-phone).
+Then `python3 -m blindgrid generate`. Every dependency is pure Python, which is
+what makes this work on a device with no compiler. If pip is not on your path
+there, `curl -sL https://raw.githubusercontent.com/adrnbttr/blindgrid/main/install.py | python3`
+does the same and sets up a starter config — see
+[On a tablet or a phone](#on-a-tablet-or-a-phone).
 
-**[Full installation guide](docs/installation.md)** — per-platform details,
+**[Full installation guide](https://github.com/adrnbttr/blindgrid/blob/main/docs/installation.md)** — per-platform details,
 other install methods, file locations, troubleshooting, updating, uninstalling.
 
 ## Use
@@ -151,7 +157,7 @@ exactly the bias the filters exist to remove.
 lotteries. It says what it is replacing before it does it.
 
 The plan lives in one file in your state directory (see
-[file locations](docs/installation.md#where-files-live)), replaced when the
+[file locations](https://github.com/adrnbttr/blindgrid/blob/main/docs/installation.md#where-files-live)), replaced when the
 month turns. It is a self-contained snapshot, so editing your config
 afterwards never changes a plan you already hold. Draws whose date has passed
 are struck through when the plan is shown again, so what is left to play is
@@ -408,4 +414,4 @@ and confidential:
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](https://github.com/adrnbttr/blindgrid/blob/main/LICENSE).

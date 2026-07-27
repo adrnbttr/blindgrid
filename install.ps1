@@ -16,7 +16,7 @@
     pipx, then a virtual environment.
 
 .PARAMETER Source
-    What to install: a path or a pip requirement. Defaults to the repository.
+    What to install: a path or a pip requirement. Defaults to the published package.
 
 .PARAMETER Ref
     Git ref to install. Default main.
@@ -56,7 +56,10 @@ $BinDir     = Join-Path $env:LOCALAPPDATA 'Programs\blindgrid'
 $ConfigDir  = Join-Path $env:APPDATA 'blindgrid'
 $StateDir   = Join-Path $env:LOCALAPPDATA 'blindgrid'
 
-if (-not $Source) { $Source = "git+$RepoUrl.git@$Ref" }
+# The published package by default; -Ref switches to GitHub at that ref.
+if (-not $Source) {
+    $Source = if ($Ref -eq 'main') { 'blindgrid' } else { "git+$RepoUrl.git@$Ref" }
+}
 
 # --------------------------------------------------------------- presentation
 

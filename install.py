@@ -10,8 +10,12 @@ source archive rather than a git URL.
 It installs with pip into whatever environment is running it, writes a starter
 configuration if there is none, and prints how to launch the tool from here.
 
+It installs the published package from PyPI, and falls back to a source
+archive from GitHub if that is unavailable — which covers a fresh checkout of
+an unreleased change as well as a PyPI outage.
+
 Options:
-    --ref <branch|tag>   Install a specific version. Default: main.
+    --ref <branch|tag>   Install from GitHub at this ref instead of PyPI.
     --source <spec>      Install from somewhere else: a path, a URL.
     --no-config          Do not create a starter configuration.
     --check              Report what would happen, install nothing.
@@ -25,6 +29,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+PACKAGE = "blindgrid"
 REPO = "https://github.com/adrnbttr/blindgrid"
 MIN_PYTHON = (3, 11)
 
@@ -100,7 +105,16 @@ def has_pip() -> bool:
     return result.returncode == 0
 
 
-def install(source: str) -> None:
+def pip_install(source: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "-m", "pip", "install", "--upgrade", source],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
+def install(source: str, fallback: str = "") -> None:
     if not has_pip():
         warn("This Python has no pip.")
         info("On a-Shell, pip is built in — try updating the app.")
@@ -109,11 +123,15 @@ def install(source: str) -> None:
 
     step("Installing")
     info(source)
-    command = [sys.executable, "-m", "pip", "install", "--upgrade", source]
     try:
-        completed = subprocess.run(command, check=False, capture_output=True, text=True)
+        completed = pip_install(source)
     except OSError as exc:
         fail(f"Could not run pip: {exc}")
+
+    if completed.returncode != 0 and fallback:
+        warn("not available there, trying the source archive")
+        info(fallback)
+        completed = pip_install(fallback)
 
     if completed.returncode != 0:
         for line in (completed.stderr or completed.stdout).strip().splitlines()[-6:]:
@@ -217,13 +235,19 @@ def main(argv: list[str]) -> None:
         ok("iOS shell detected")
 
     # A source archive rather than git+: the iOS shells have no git.
-    source = source or f"{REPO}/archive/refs/heads/{ref}.zip"
+    archive = f"{REPO}/archive/refs/heads/{ref}.zip"
+    if source:
+        wanted, fallback = source, ""
+    elif "--ref" in argv:
+        wanted, fallback = archive, ""
+    else:
+        wanted, fallback = PACKAGE, archive
 
     if check_only:
-        info(f"would install: {source}")
+        info(f"would install: {wanted}")
         return
 
-    install(source)
+    install(wanted, fallback)
     verify()
     if create_config:
         write_config()

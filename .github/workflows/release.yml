@@ -1,0 +1,131 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  # The tag is the trigger, so nothing stops a tag being pushed from a commit
+  # that does not build or whose version disagrees with it. Check first.
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Install the package
+        run: uv venv --python 3.11 && uv pip install -e ".[dev]"
+
+      - name: Lint and test
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run pytest -q
+
+      - name: The tag matches the declared version
+        id: check
+        run: |
+          declared=$(uv run python -c "import blindgrid; print(blindgrid.__version__)")
+          tagged="${GITHUB_REF_NAME#v}"
+          echo "version=$declared" >> "$GITHUB_OUTPUT"
+          if [ "$declared" != "$tagged" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match version $declared"
+            exit 1
+          fi
+          echo "$declared"
+
+      - name: The changelog has an entry for it
+        run: |
+          grep -q "^## \[${GITHUB_REF_NAME#v}\]" CHANGELOG.md || {
+            echo "::error::no CHANGELOG entry for ${GITHUB_REF_NAME#v}"; exit 1; }
+
+  build:
+    name: Build
+    needs: verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Build the distributions
+        run: uv build
+
+      # An sdist that cannot be installed is worse than no sdist, and the
+      # example config reaches the wheel through a force-include that is easy
+      # to break without noticing.
+      - name: The built wheel installs and runs
+        run: |
+          uv venv --python 3.11 /tmp/check
+          /tmp/check/bin/python -m ensurepip --upgrade >/dev/null
+          /tmp/check/bin/python -m pip install --quiet dist/*.whl
+          /tmp/check/bin/blindgrid version
+          /tmp/check/bin/blindgrid config init --config /tmp/bg.toml
+          BLINDGRID_CONFIG=/tmp/bg.toml /tmp/check/bin/python -m blindgrid \
+            generate -b 20 -l Loto -m 2026-09 --no-export
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/blindgrid
+    permissions:
+      # Trusted publishing: PyPI verifies this workflow's identity directly,
+      # so there is no API token to store, leak or rotate.
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    name: GitHub release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+
+      - name: Draft the notes from the changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          cat notes.md
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --notes-file notes.md

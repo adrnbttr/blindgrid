@@ -11,7 +11,7 @@
 #
 # Options:
 #   --method auto|uv|pipx|venv   How to install. Default: auto (uv, then pipx, then venv).
-#   --source <path|url>          What to install. Default: the GitHub repository.
+#   --source <path|url>          What to install. Default: the published package.
 #   --ref <branch|tag>           Git ref to install. Default: main.
 #   --no-config                  Skip creating a starter configuration file.
 #   --uninstall                  Remove blindgrid, keeping your configuration.
@@ -95,7 +95,10 @@ case "$METHOD" in
   *) die "Unknown method: $METHOD. Expected auto, uv, pipx or venv." ;;
 esac
 
-[ -n "$SOURCE" ] || SOURCE="git+$REPO_URL.git@$REF"
+# The published package by default; --ref switches to GitHub at that ref.
+if [ -z "$SOURCE" ]; then
+  if [ "$REF" = "main" ]; then SOURCE="blindgrid"; else SOURCE="git+$REPO_URL.git@$REF"; fi
+fi
 
 # ----------------------------------------------------------------- uninstalling
 

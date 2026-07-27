@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "blindgrid"
-version = "0.1.0"
+version = "0.2.0"
 description = "Generate lottery grids from cryptographic randomness and plan a month within a hard budget cap."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -43,6 +43,11 @@ Issues = "https://github.com/adrnbttr/blindgrid/issues"
 
 [project.scripts]
 blindgrid = "blindgrid.cli:app"
+
+# The demo recording is a megabyte of README decoration; nobody installing the
+# package needs it, and it would dominate the download.
+[tool.hatch.build.targets.sdist]
+exclude = ["/docs/demo.gif", "/docs/demo.tape", "/.github", "/uv.lock"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/blindgrid"]
