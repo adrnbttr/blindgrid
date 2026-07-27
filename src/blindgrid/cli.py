@@ -308,12 +308,12 @@ def generate(
         typer.Option(
             "--budget",
             "-b",
-            help="Budget to use. With players configured: NAME=AMOUNT, repeatable.",
+            help=t("option.budget"),
         ),
     ] = None,
     lottery: Annotated[
         list[str] | None,
-        typer.Option("--lottery", "-l", help="Include this lottery. Repeatable. Solo mode only."),
+        typer.Option("--lottery", "-l", help=t("option.lottery")),
     ] = None,
     player: Annotated[
         list[str] | None,
@@ -426,12 +426,10 @@ def config_main(ctx: typer.Context, config_path: ConfigOption = None) -> None:
         edit(config_path)
 
 
-@config_app.command("init")
+@config_app.command("init", help=t("config.init.help"))
 def config_init(
     config_path: ConfigOption = None,
-    force: Annotated[
-        bool, typer.Option("--force", help="Overwrite an existing configuration.")
-    ] = False,
+    force: Annotated[bool, typer.Option("--force", help=t("option.force.init"))] = False,
 ) -> None:
     """Create a configuration file from the shipped example."""
     target = config_path or Path.cwd() / config.CONFIG_FILENAME
@@ -446,7 +444,7 @@ def config_init(
     console.print(Text(t("config.review"), style="dim"))
 
 
-@config_app.command("show")
+@config_app.command("show", help=t("config.show.help"))
 def config_show(config_path: ConfigOption = None, lang: LangOption = None) -> None:
     """Print the active configuration."""
     settings = _load(config_path)
@@ -488,7 +486,7 @@ def config_show(config_path: ConfigOption = None, lang: LangOption = None) -> No
     console.print()
 
 
-@config_app.command("edit")
+@config_app.command("edit", help=t("config.edit.help"))
 def edit(config_path: ConfigOption = None, lang: LangOption = None) -> None:
     """Walk through the configuration values one by one."""
     settings = _load(config_path)
@@ -542,7 +540,7 @@ def edit(config_path: ConfigOption = None, lang: LangOption = None) -> None:
     console.print(Text(t("config.saved", path=written), style="green"))
 
 
-@lottery_app.command("list")
+@lottery_app.command("list", help=t("lottery.list.help"))
 def lottery_list(config_path: ConfigOption = None, lang: LangOption = None) -> None:
     """Show every configured lottery."""
     settings = _load(config_path)
@@ -586,7 +584,7 @@ def _ask_pools() -> tuple[Pool, ...]:
             return tuple(pools)
 
 
-@lottery_app.command("add")
+@lottery_app.command("add", help=t("lottery.add.help"))
 def lottery_add(config_path: ConfigOption = None, lang: LangOption = None) -> None:
     """Add a lottery definition, or replace one with the same label."""
     settings = _load(config_path)
@@ -662,7 +660,7 @@ def _ask_weights(settings: config.Settings, existing: Player | None) -> dict[str
     return weights
 
 
-@player_app.command("add")
+@player_app.command("add", help=t("player.add.help"))
 def player_add(config_path: ConfigOption = None, lang: LangOption = None) -> None:
     """Add someone who plays, or update them if the name already exists.
 
@@ -708,7 +706,7 @@ def player_add(config_path: ConfigOption = None, lang: LangOption = None) -> Non
         console.print(Text(t("player.second.hint"), style="dim"))
 
 
-@player_app.command("list")
+@player_app.command("list", help=t("player.list.help"))
 def player_list(config_path: ConfigOption = None, lang: LangOption = None) -> None:
     """Show everyone who plays, with their ceiling and preferences."""
     settings = _load(config_path)
@@ -740,9 +738,9 @@ def player_list(config_path: ConfigOption = None, lang: LangOption = None) -> No
     console.print()
 
 
-@player_app.command("remove")
+@player_app.command("remove", help=t("player.remove.help"))
 def player_remove(
-    name: Annotated[str, typer.Argument(help="Who to remove.")],
+    name: Annotated[str, typer.Argument(help=t("argument.player.name"))],
     config_path: ConfigOption = None,
 ) -> None:
     """Remove someone. Their configuration is deleted, nothing else."""

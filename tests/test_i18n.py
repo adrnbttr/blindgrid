@@ -7,8 +7,11 @@ ships unnoticed — so it fails the build here instead.
 
 from __future__ import annotations
 
+import os
 import random
 import string
+import subprocess
+import sys
 from decimal import Decimal
 
 import pytest
@@ -200,3 +203,68 @@ def test_english_is_listed_first() -> None:
 
 def test_every_language_has_a_display_name() -> None:
     assert set(i18n.LANGUAGE_NAMES) == set(i18n.CATALOGUES)
+
+
+# --------------------------------------------------- help text follows the language
+
+
+HELP_KEYS = [key for key in en.MESSAGES if key.endswith(".help")]
+
+COMMAND_HELP = [
+    ([], "app.help"),
+    (["generate"], "generate.help"),
+    (["config"], "config.help"),
+    (["config", "init"], "config.init.help"),
+    (["config", "show"], "config.show.help"),
+    (["config", "edit"], "config.edit.help"),
+    (["lottery"], "lottery.help"),
+    (["lottery", "add"], "lottery.add.help"),
+    (["lottery", "list"], "lottery.list.help"),
+    (["player"], "player.help"),
+    (["player", "add"], "player.add.help"),
+    (["player", "list"], "player.list.help"),
+    (["player", "remove"], "player.remove.help"),
+    (["version"], "version.help"),
+]
+
+
+def _help(command: list[str], language: str) -> str:
+    """Capture --help for a command with the language pinned.
+
+    Typer reads its help strings when the module is imported, so the language
+    has to be set before the import that builds the app object — hence the
+    subprocess rather than CliRunner.
+    """
+    result = subprocess.run(
+        [sys.executable, "-m", "blindgrid", *command, "--help"],
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "BLINDGRID_LANG": language, "COLUMNS": "200", "NO_COLOR": "1"},
+    )
+    return result.stdout
+
+
+@pytest.mark.parametrize(
+    ("command", "key"), COMMAND_HELP, ids=lambda v: "-".join(v) if isinstance(v, list) else v
+)
+def test_help_is_translated(command: list[str], key: str) -> None:
+    """Every command's help follows the language, not its docstring.
+
+    Typer falls back to the function's docstring unless a command passes
+    ``help=``, which left these in English twice before. The first few words
+    are enough to tell one from the other without depending on how the box
+    wraps them.
+    """
+    french = i18n.CATALOGUES["fr"][key]
+    opening = " ".join(french.split()[:3])
+    assert opening in " ".join(_help(command, "fr").split()), f"{key} did not follow the language"
+
+
+@pytest.mark.parametrize("code", OTHERS)
+def test_no_english_help_survives_a_language_switch(code: str) -> None:
+    """The top-level screen must not mix languages."""
+    output = " ".join(_help([], code).split())
+    for key in ("generate.help", "config.help", "lottery.help", "player.help"):
+        english = " ".join(en.MESSAGES[key].split()[:4])
+        assert english not in output, f"{key} stayed English in {code}"
