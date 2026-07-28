@@ -165,17 +165,39 @@ obvious.
 
 ## On a tablet or a phone
 
-The plan lays itself out to fit, measured against the terminal rather than
-guessed at.
+The plan is measured against your terminal and laid out to fit it, rather than
+assuming a width.
 
-The table is deliberately narrow: the month is in the title, so each row
-carries the day alone rather than repeating `2026-09-`, and the weekday is
-abbreviated the way each language does it. That keeps it under 90 columns even
-with two players, which is what an **iPad in portrait** gives you — so rotating
-the device no longer flips the layout.
+**The table is deliberately narrow.** The month is already in the title, so
+each row carries the day alone instead of repeating `2026-09-`, and the weekday
+is abbreviated the way each language writes it — German uses `Mi`, not a
+truncated `Mit`. That is twelve columns saved, which is what puts a two-player
+plan inside the ~90 columns an **iPad gives you in portrait**. Rotating the
+device no longer changes the layout.
 
-Squeeze it far enough — a phone, a split view — and the table would shred the
-numbers, so it becomes a list instead:
+**Below that it sheds what it can spare, one thing at a time**, rather than
+giving up on the table at the first squeeze:
+
+| | What it gives up | Two players | One player |
+| --- | --- | --- | --- |
+| Full table | — | 85+ | 76+ |
+| Leaner | The cost — fixed per lottery, totalled below | 74+ | 65+ |
+| Leaner still | …and the weekday, which follows from the date | 68+ | 59+ |
+| List | The table itself | below that | below that |
+
+Those widths are the point at which each layout is guaranteed; a column or two
+either side it depends on the draw, since a row of single-digit numbers is
+narrower than one full of two-digit ones. Nothing is measured in advance — the
+layout is chosen against your actual terminal, every run.
+
+What never goes, at any width, is the answer to *what do I play, and when*:
+the date, the lottery, and the numbers.
+
+The summaries follow the same rule — squeezed, they become plain lines rather
+than a table with `Lottery` cut down to `Lotte…`.
+
+**Narrower still**, on a phone or in a split view, the table would shred the
+numbers across lines, so it becomes a list:
 
 ```
 September 2026
@@ -187,26 +209,14 @@ September 2026
      7 20 22 34 35  ·  lucky  2
 ```
 
-The table does not simply give up when it runs out of room — it sheds what it
-can spare first, in this order:
-
-| Width | What you get |
-| --- | --- |
-| Desktop, iPad landscape | Full table |
-| **iPad portrait** (~90 cols) | Full table |
-| ~70–85 cols | Table without the cost column — it is fixed per lottery and totalled below |
-| ~60–70 cols | …and without the weekday, which follows from the date |
-| Phone, split view (under ~60) | List, two lines per draw |
-
-What never goes is the answer to *what do I play, and when*: the date, the
-lottery, and the numbers. `--compact` and `--table` override the choice.
-
 The numbers are the one thing you copy onto a paper slip, so they are never
-wrapped and nothing is ever cut to `Eur…`. It stays readable down to about 40
-columns. `--compact` and `--table` force either layout.
+wrapped and nothing is ever cut with an ellipsis, at any width. This stays
+readable down to about 40 columns.
 
-The Markdown export keeps full dates and full weekday names: it is read away
-from the terminal, where there is no title above it to give the context.
+`--compact` and `--table` override the choice if you would rather decide
+yourself. The Markdown export is unaffected: it keeps full dates and full
+weekday names, since it is read away from the terminal with no title above it
+to supply the month.
 
 ## Playing as a household
 

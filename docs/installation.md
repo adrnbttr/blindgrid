@@ -85,12 +85,19 @@ option to use instead, rather than failing with a traceback.
 
 ### The screen
 
-An iPad in portrait gives you around 60 columns, which is not enough for the
-table. blindgrid measures and switches to a list where each draw's numbers sit
-on their own line, unwrapped and untruncated — see
-[On a tablet or a phone](../README.md#on-a-tablet-or-a-phone). Rotating to
-landscape brings the table back. `--compact` and `--table` override the
-choice.
+An iPad in portrait gives you roughly 90 columns in a-Shell, which the table
+is built to fit: the month lives in the title rather than on every row, and
+the weekday is abbreviated. Rotating between portrait and landscape does not
+change the layout.
+
+On anything narrower — a phone, a split view — the table gives up its optional
+columns one at a time before falling back to a list, and the numbers are never
+wrapped or truncated at any width. The full breakdown is in
+[On a tablet or a phone](../README.md#on-a-tablet-or-a-phone); `--compact` and
+`--table` override the choice.
+
+If the tables look cramped, a smaller font in a-Shell buys you columns —
+`config` in the app, or pinch to zoom out.
 
 ### Where your files go
 
@@ -121,8 +128,8 @@ which is what makes iOS possible, since a-Shell has neither bash nor git.
 
 All three are exercised on every push: CI installs the project with them on
 clean Linux, macOS and Windows runners, runs the installed command, and
-uninstalls again. The Python one is additionally checked at 55 columns, and
-with no terminal attached, since that is what an iPad looks like.
+uninstalls again. The Python one is additionally run at 40, 55 and 70 columns
+and with no terminal attached, since that is what an iPad looks like.
 
 ### Reading it before running it
 
