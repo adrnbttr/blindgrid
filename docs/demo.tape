@@ -43,7 +43,7 @@ Sleep 800ms
 Type "blindgrid player list"
 Sleep 400ms
 Enter
-Sleep 2.4s
+Sleep 2.2s
 
 Type "clear"
 Enter
@@ -63,7 +63,10 @@ Sleep 1s
 Type "12"
 Sleep 600ms
 Enter
-Sleep 3.6s
+# Long enough to actually read the plan: the draws, who plays what, the
+# totals. Someone seeing this for the first time needs far longer than
+# whoever recorded it thinks.
+Sleep 9s
 
 Type "clear"
 Enter
@@ -73,5 +76,7 @@ Sleep 300ms
 Type "blindgrid generate -m 2026-09"
 Sleep 400ms
 Enter
-Sleep 3.5s
+# Shorter: the plan is already familiar by now, and what this run shows is
+# the notice at the top and that the numbers have not moved.
+Sleep 5.5s
 
