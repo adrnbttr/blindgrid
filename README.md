@@ -11,7 +11,8 @@
 
 <p>
   <a href="https://github.com/adrnbttr/blindgrid/actions/workflows/ci.yml"><img src="https://github.com/adrnbttr/blindgrid/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+"></a>
+  <a href="https://pypi.org/project/blindgrid/"><img src="https://img.shields.io/pypi/v/blindgrid?color=blue" alt="On PyPI"></a>
+  <a href="https://pypi.org/project/blindgrid/"><img src="https://img.shields.io/pypi/pyversions/blindgrid" alt="Python versions"></a>
   <a href="https://github.com/adrnbttr/blindgrid/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/predictions-none-lightgrey" alt="Predictions: none">
 </p>
@@ -84,7 +85,8 @@ Runs on Linux, macOS, Windows, and iOS through a-Shell.
 pip install blindgrid        # or: uv tool install blindgrid
 ```
 
-That is the whole of it if you already have Python 3.11 or newer. The scripts
+That is the whole of it if you already have Python 3.11 or newer —
+[the package is on PyPI](https://pypi.org/project/blindgrid/). The scripts
 below add a little more: they pick an install method for you, write a starter
 configuration, and tell you what to put on your `PATH`.
 
@@ -442,13 +444,23 @@ is as predictable as numbers chosen by birthdate.
 ## Development
 
 ```bash
-uv pip install -e ".[dev]"
+git clone https://github.com/adrnbttr/blindgrid.git
+cd blindgrid
+uv venv && uv pip install -e ".[dev]"
+
 pytest
-ruff check .
-ruff format --check .
+ruff check . && ruff format --check .
 ```
 
-CI runs both on Python 3.11, 3.12 and 3.13.
+CI runs the suite on Linux (3.11, 3.12, 3.13), macOS and Windows, and installs
+the project with each of the three installers on a clean runner before
+uninstalling it again.
+
+**[CONTRIBUTING.md](https://github.com/adrnbttr/blindgrid/blob/main/CONTRIBUTING.md)**
+covers the rest — including what will not be merged, which is worth reading
+first — and
+**[CHANGELOG.md](https://github.com/adrnbttr/blindgrid/blob/main/CHANGELOG.md)**
+records what changed in each release.
 
 ## Responsible gambling
 
