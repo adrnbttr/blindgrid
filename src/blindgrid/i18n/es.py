@@ -23,6 +23,11 @@ MESSAGES: dict[str, str] = {
     "player.remove.help": "Elimina a alguien. Solo desaparece su configuración.",
     "option.force.init": "Sobrescribir una configuración existente.",
     "argument.player.name": "A quién eliminar.",
+    "option.player.name": "El nombre de la persona. Omite la pregunta.",
+    "option.player.ceiling": "Su límite mensual estricto. Omite la pregunta.",
+    "option.player.play": (
+        "Una lotería a la que juega: NOMBRE o NOMBRE=PESO. Repetible, omite la pregunta."
+    ),
     "option.config": "Ruta del archivo de configuración.",
     "option.budget": "Presupuesto a usar. Con jugadores: NOMBRE=IMPORTE, repetible.",
     "option.lottery": "Incluir esta lotería. Repetible. Solo en modo individual.",

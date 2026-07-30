@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -421,3 +422,75 @@ def test_an_unknown_configured_language_is_reported(
     result = runner.invoke(app, ["config", "show"])
     assert result.exit_code == 1
     assert "not available" in result.output
+
+
+# ------------------------------------------------ adding a player without prompts
+
+
+def test_a_player_can_be_added_entirely_from_options(household: Path) -> None:
+    """The checkbox prompt needs a terminal that can draw one; the iOS shells
+    show the help line and nothing else, so every field has an option."""
+    result = runner.invoke(
+        app,
+        [
+            "player",
+            "add",
+            "--name",
+            "Claire",
+            "--ceiling",
+            "15",
+            "--play",
+            "Loto",
+            "--play",
+            "EuroDreams=0.5",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    claire = config.load(household / "config.toml").find_player("Claire")
+    assert claire is not None
+    assert claire.max_monthly_budget == Decimal("15.00")
+    assert claire.weights == {"Loto": 1.0, "EuroDreams": 0.5}
+
+
+def test_a_weight_defaults_to_one(household: Path) -> None:
+    runner.invoke(app, ["player", "add", "--name", "Claire", "--ceiling", "15", "--play", "Loto"])
+    assert config.load(household / "config.toml").find_player("Claire").weights == {"Loto": 1.0}
+
+
+def test_adding_a_player_works_with_no_terminal_at_all(household: Path) -> None:
+    """A pipe, a script, or a shell that cannot prompt."""
+    result = runner.invoke(
+        app,
+        ["player", "add", "--name", "Claire", "--ceiling", "15", "--play", "Loto"],
+        input="",
+    )
+    assert result.exit_code == 0
+
+
+def test_an_unknown_lottery_in_play_is_reported(household: Path) -> None:
+    result = runner.invoke(
+        app, ["player", "add", "--name", "Claire", "--ceiling", "15", "--play", "Keno"]
+    )
+
+    assert result.exit_code == 1
+    assert "Unknown lottery" in result.output
+    assert "EuroMillions" in result.output
+
+
+@pytest.mark.parametrize("weight", ["0", "-1", "abc"])
+def test_a_bad_weight_is_refused(weight: str, household: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["player", "add", "--name", "Claire", "--ceiling", "15", "--play", f"Loto={weight}"],
+    )
+    assert result.exit_code == 1
+
+
+def test_options_update_an_existing_player(household: Path) -> None:
+    runner.invoke(app, ["player", "add", "--name", "Marie", "--ceiling", "30", "--play", "Loto"])
+
+    marie = config.load(household / "config.toml").find_player("Marie")
+    assert marie.max_monthly_budget == Decimal("30.00")
+    assert marie.weights == {"Loto": 1.0}
+    assert len(config.load(household / "config.toml").players) == 2

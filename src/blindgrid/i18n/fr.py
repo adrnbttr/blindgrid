@@ -22,6 +22,11 @@ MESSAGES: dict[str, str] = {
     "player.remove.help": "Retire une personne. Seule sa configuration disparaît.",
     "option.force.init": "Écraser une configuration existante.",
     "argument.player.name": "Qui retirer.",
+    "option.player.name": "Le nom de la personne. Évite la question.",
+    "option.player.ceiling": "Son plafond mensuel strict. Évite la question.",
+    "option.player.play": (
+        "Une loterie à laquelle elle joue : NOM ou NOM=POIDS. Répétable, évite la question."
+    ),
     "option.config": "Chemin du fichier de configuration.",
     "option.budget": "Budget à utiliser. Avec des joueurs : NOM=MONTANT, répétable.",
     "option.lottery": "Inclure cette loterie. Répétable. Mode solo uniquement.",

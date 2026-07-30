@@ -6,6 +6,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `player add` takes `--name`, `--ceiling` and `--play NAME=WEIGHT`, so a
+  person can be added without a single prompt. The README promised that every
+  prompt had an option behind it; this is the command where that was not true.
+  It matters on the iOS shells, which have a terminal but cannot draw the
+  checkbox the command used to rely on: the list came up empty and there was no
+  way to choose.
+
 ## [0.2.1] - 2026-07-27
 
 ### Changed

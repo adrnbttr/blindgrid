@@ -24,6 +24,11 @@ MESSAGES: dict[str, str] = {
     "player.remove.help": "Remove someone. Only their configuration goes.",
     "option.force.init": "Overwrite an existing configuration.",
     "argument.player.name": "Who to remove.",
+    "option.player.name": "The person's name. Skips the prompt.",
+    "option.player.ceiling": "Their hard monthly ceiling. Skips the prompt.",
+    "option.player.play": (
+        "A lottery they play, as NAME or NAME=WEIGHT. Repeatable, skips the prompt."
+    ),
     "option.config": "Path to the configuration file.",
     "option.budget": "Budget to use. With players configured: NAME=AMOUNT, repeatable.",
     "option.lottery": "Include this lottery. Repeatable. Single-player mode only.",

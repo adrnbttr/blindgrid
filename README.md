@@ -230,6 +230,13 @@ blindgrid player add     # name, ceiling, which lotteries, what weights
 blindgrid generate       # asks each person for their budget, then plans
 ```
 
+`player add` takes options too, which is what you want in a shell that cannot
+draw a checkbox — the iOS ones cannot:
+
+```bash
+blindgrid player add --name Marie --ceiling 25 --play Loto --play EuroDreams=1
+```
+
 ```
 ╭──────┬─────┬────────┬──────────────┬────────────────────────────────┬──────────╮
 │ Date │ Day │ Player │ Lottery      │ Numbers                        │     Cost │

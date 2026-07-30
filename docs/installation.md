@@ -78,10 +78,18 @@ every prompt has one, and the tool then needs no terminal at all:
 ```bash
 python3 -m blindgrid generate --budget 30 --lottery Loto
 python3 -m blindgrid generate --budget "Adrien=20" --budget "Marie=12"
+python3 -m blindgrid player add --name Marie --ceiling 25 \
+  --play Loto --play EuroDreams=1
 ```
 
-Asked for something it cannot prompt for, blindgrid says so and shows the
-option to use instead, rather than failing with a traceback.
+a-Shell is a case worth knowing about: it has a terminal, so a text prompt
+works, but it cannot draw the list-with-checkboxes that `player add` and
+`lottery add` use to offer choices. You get the "use arrow keys" hint and an
+empty space below it. Press **Enter** to leave the prompt — an empty selection
+stops cleanly and changes nothing — then use the options above instead.
+
+Asked for something it cannot prompt for at all, blindgrid says so and shows
+the option to use instead, rather than failing with a traceback.
 
 ### The screen
 

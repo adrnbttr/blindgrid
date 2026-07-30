@@ -22,6 +22,12 @@ MESSAGES: dict[str, str] = {
     "player.remove.help": "Entfernt eine Person. Nur ihre Konfiguration verschwindet.",
     "option.force.init": "Eine vorhandene Konfiguration überschreiben.",
     "argument.player.name": "Wen entfernen.",
+    "option.player.name": "Der Name der Person. Überspringt die Frage.",
+    "option.player.ceiling": "Ihre feste Monatsgrenze. Überspringt die Frage.",
+    "option.player.play": (
+        "Eine Lotterie, die sie spielt: NAME oder NAME=GEWICHT. "
+        "Wiederholbar, überspringt die Frage."
+    ),
     "option.config": "Pfad zur Konfigurationsdatei.",
     "option.budget": "Zu verwendendes Budget. Mit Spielern: NAME=BETRAG, wiederholbar.",
     "option.lottery": "Diese Lotterie einbeziehen. Wiederholbar. Nur im Einzelmodus.",

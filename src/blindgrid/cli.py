@@ -660,18 +660,60 @@ def _ask_weights(settings: config.Settings, existing: Player | None) -> dict[str
     return weights
 
 
+def _parse_plays(settings: config.Settings, pairs: list[str]) -> dict[str, float]:
+    """Turn ``Loto=1`` pairs into weights, checking the lotteries exist."""
+    weights: dict[str, float] = {}
+    for pair in pairs:
+        label, separator, raw = pair.partition("=")
+        found = settings.find(label.strip())
+        if found is None:
+            _fatal(
+                t(
+                    "error.lottery.unknown",
+                    label=repr(label.strip()),
+                    known=", ".join(lot.label for lot in settings.lotteries),
+                )
+            )
+        weight = 1.0
+        if separator and raw.strip():
+            try:
+                weight = float(raw.strip().replace(",", "."))
+            except ValueError:
+                _fatal(t("error.not.number", value=repr(raw.strip())))
+        if weight <= 0:
+            _fatal(t("error.weight.positive", label=found.label))
+        weights[found.label] = weight
+    return weights
+
+
 @player_app.command("add", help=t("player.add.help"))
-def player_add(config_path: ConfigOption = None, lang: LangOption = None) -> None:
+def player_add(
+    config_path: ConfigOption = None,
+    lang: LangOption = None,
+    name_option: Annotated[
+        str | None, typer.Option("--name", help=t("option.player.name"), show_default=False)
+    ] = None,
+    ceiling_option: Annotated[
+        str | None, typer.Option("--ceiling", help=t("option.player.ceiling"), show_default=False)
+    ] = None,
+    plays: Annotated[
+        list[str] | None,
+        typer.Option("--play", help=t("option.player.play"), show_default=False),
+    ] = None,
+) -> None:
     """Add someone who plays, or update them if the name already exists.
 
     Everyone keeps their own ceiling and their own lotteries. Configuring a
     second person switches `generate` to household mode, where draws are spread
     across dates so the same game is not played twice on the same day.
+
+    Give --name, --ceiling and --play and nothing is asked: the checkbox prompt
+    needs a terminal that can draw one, which the iOS shells cannot.
     """
     settings = _load(config_path)
     _apply_language(lang, settings)
 
-    name = str(_answer(questionary.text(t("prompt.player.name")))).strip()
+    name = (name_option or str(_answer(questionary.text(t("prompt.player.name"))))).strip()
     if not name:
         _fatal(t("error.name.empty"))
 
@@ -679,7 +721,7 @@ def player_add(config_path: ConfigOption = None, lang: LangOption = None) -> Non
     if existing is not None:
         console.print(Text(t("player.updating", name=existing.name), style="dim"))
 
-    ceiling = str(
+    ceiling = ceiling_option or str(
         _answer(
             questionary.text(
                 t("prompt.player.ceiling", name=name),
@@ -689,7 +731,7 @@ def player_add(config_path: ConfigOption = None, lang: LangOption = None) -> Non
             )
         )
     )
-    weights = _ask_weights(settings, existing)
+    weights = _parse_plays(settings, plays) if plays else _ask_weights(settings, existing)
 
     try:
         player = Player(
