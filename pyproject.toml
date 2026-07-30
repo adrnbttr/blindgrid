@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "blindgrid"
-version = "0.2.1"
+version = "0.2.2"
 description = "Generate lottery grids from cryptographic randomness and plan a month within a hard budget cap."
 readme = "README.md"
 license = { file = "LICENSE" }
